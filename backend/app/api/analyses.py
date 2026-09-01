@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
@@ -22,6 +22,7 @@ from app.schemas.analysis import (
     AnalysisPlayersResponse,
     AnalysisStatusResponse,
     AnalysisTimelineResponse,
+    AnalysisWindow,
     MetricsResponse,
     TeamMetrics,
 )
@@ -49,11 +50,23 @@ def _get_or_404(db: Session, analysis_id: str) -> Analysis:
 async def create_analysis(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
+    start_seconds: float | None = Form(
+        None, ge=0, description="Analyse from this offset, in seconds from the start of the video."
+    ),
+    end_seconds: float | None = Form(
+        None, gt=0, description="Stop analysing at this offset. Omit to run until the frame budget is spent."
+    ),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> AnalysisCreateResponse:
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file provided.")
+
+    if start_seconds is not None and end_seconds is not None and end_seconds <= start_seconds:
+        raise HTTPException(
+            status_code=400,
+            detail="The end of the analysis window must come after its start.",
+        )
 
     try:
         suffix = validate_filename(file.filename)
@@ -66,6 +79,8 @@ async def create_analysis(
         status="queued",
         stage="uploaded",
         progress=0,
+        analysis_start_seconds=start_seconds,
+        analysis_end_seconds=end_seconds,
     )
     db.add(analysis)
     db.commit()
@@ -126,6 +141,10 @@ def get_analysis(analysis_id: str, db: Session = Depends(get_db)) -> AnalysisFul
         stage=analysis.stage,
         progress=int(analysis.progress),
         original_filename=analysis.original_filename,
+        analysis_window=AnalysisWindow(
+            requested_start_seconds=analysis.analysis_start_seconds,
+            requested_end_seconds=analysis.analysis_end_seconds,
+        ),
         video_url=f"/api/v1/analyses/{analysis.id}/video",
         annotated_video_url=(
             f"/api/v1/analyses/{analysis.id}/video/annotated" if analysis.annotated_video_path else None

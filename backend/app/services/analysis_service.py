@@ -93,7 +93,10 @@ def run_analysis(analysis_id: str, db: Session, settings: Settings) -> None:
 
         max_frames = settings.max_processed_frames
         processed_count = 0
-        for sampled in processor.extract_frames():
+        for sampled in processor.extract_frames(
+            start_seconds=analysis.analysis_start_seconds or 0.0,
+            end_seconds=analysis.analysis_end_seconds,
+        ):
             if processed_count >= max_frames:
                 logger.warning(
                     "Analysis %s: reached MAX_PROCESSED_FRAMES=%d, truncating remainder of video",

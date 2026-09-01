@@ -44,6 +44,13 @@ class Analysis(Base):
     # Video metadata (populated during frame extraction)
     video_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
+    # The slice of the upload the coach asked to analyse. Broadcast footage
+    # opens with an intro package, so analysing from 0 is rarely what they
+    # want. Null start means "from the beginning"; null end means "until the
+    # frame budget runs out".
+    analysis_start_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    analysis_end_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+
     # Pipeline results (populated progressively as stages complete)
     players: Mapped[list | None] = mapped_column(JSON, nullable=True)
     ball_positions: Mapped[list | None] = mapped_column(JSON, nullable=True)

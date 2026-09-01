@@ -107,3 +107,22 @@ def test_full_upload_and_analysis_pipeline(client):
 
     video_response = client.get(f"/api/v1/analyses/{analysis_id}/video")
     assert video_response.status_code == 200
+
+
+def test_rejects_a_window_that_ends_before_it_starts(client):
+    response = client.post(
+        "/api/v1/analyses",
+        files={"file": ("clip.mp4", io.BytesIO(b"irrelevant"), "video/mp4")},
+        data={"start_seconds": "120", "end_seconds": "60"},
+    )
+    assert response.status_code == 400
+    assert "after its start" in response.json()["detail"]
+
+
+def test_rejects_a_negative_window_start(client):
+    response = client.post(
+        "/api/v1/analyses",
+        files={"file": ("clip.mp4", io.BytesIO(b"irrelevant"), "video/mp4")},
+        data={"start_seconds": "-30"},
+    )
+    assert response.status_code == 422

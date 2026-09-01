@@ -1,6 +1,10 @@
 # --- Secrets ---
 .env
 *.env.local
+# Timestamped backups of .env — these hold real keys and the bare
+# `.env` rule above does not match them.
+.env.bak*
+.env.backup*
 
 # --- Python / backend ---
 backend/.venv/
