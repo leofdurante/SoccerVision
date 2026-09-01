@@ -19,3 +19,6 @@ os.environ["DATABASE_URL"] = f"sqlite:///{_tmp_dir}/test.db"
 os.environ["UPLOAD_DIR"] = f"{_tmp_dir}/uploads"
 os.environ["OUTPUT_DIR"] = f"{_tmp_dir}/processed"
 os.environ["AI_API_KEY"] = ""  # force the deterministic rule-based insight fallback in tests
+os.environ["MODEL_PATH"] = "yolov8n.pt"  # keep the integration test on the small weights
+os.environ["CONFIDENCE_THRESHOLD"] = "0.25"
+os.environ["PROCESSING_FPS"] = "5"

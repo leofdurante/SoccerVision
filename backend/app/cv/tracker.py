@@ -2,11 +2,11 @@
 
 Uses Ultralytics' ByteTrack implementation with a tuned config
 (`trackers/soccer_bytetrack.yaml`) — the shipped defaults assume ~30 fps
-broadcast and churn identities badly at the 5 fps this project samples at. Detection and tracking share one
-underlying YOLO model instance (tracking calls `model.track(...,
-persist=True)` on the same weights the `Detector` uses) so we don't pay
-to load the model twice, while still exposing tracking behind its own
-small interface per the spec.
+broadcast and churn identities badly at the 8 fps this project samples at.
+Detection and tracking share one underlying YOLO model instance (tracking
+calls `model.track(..., persist=True)` on the same weights the `Detector`
+uses) so we don't pay to load the model twice, while still exposing
+tracking behind its own small interface per the spec.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ from app.cv.detector import CLASS_MAP
 
 logger = logging.getLogger("soccervision.cv.tracker")
 
-# Tuned for 5 fps sampling of a panning camera; see the file's own header for
+# Tuned for 8 fps sampling of a panning camera; see the file's own header for
 # the measurements behind each value.
 _TRACKER_CONFIG = Path(__file__).parent / "trackers" / "soccer_bytetrack.yaml"
 
@@ -87,7 +87,7 @@ class ByteTrackTracker:
     def __init__(
         self,
         model_path: str,
-        confidence_threshold: float = 0.25,
+        confidence_threshold: float = 0.45,
         imgsz: int = 1280,
         filter_to_playing_surface: bool = True,
     ):

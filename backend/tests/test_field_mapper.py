@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from app.cv.field_mapper import FieldMapper, FieldMappingError
@@ -45,3 +46,24 @@ def test_custom_image_corners():
     )
     top_left_field = mapper.image_to_field((100, 0))
     assert top_left_field == pytest.approx((0, 0), abs=0.5)
+
+
+def test_pitch_corners_follow_the_turf_not_the_stands():
+    from app.cv.field_mapper import estimate_pitch_image_corners
+
+    frame = np.zeros((360, 640, 3), dtype=np.uint8)
+    frame[:120] = (40, 40, 45)
+    frame[120:] = (60, 140, 70)
+    corners = estimate_pitch_image_corners(frame)
+    assert corners is not None
+    # Top edge of the pitch should sit on the turf, not the stands.
+    assert corners[0][1] == pytest.approx(120, abs=5)
+    assert corners[2][1] == pytest.approx(359, abs=2)
+
+
+def test_pitch_corners_are_none_when_there_is_no_turf():
+    from app.cv.field_mapper import estimate_pitch_image_corners
+
+    frame = np.zeros((360, 640, 3), dtype=np.uint8)
+    frame[:] = (40, 40, 45)
+    assert estimate_pitch_image_corners(frame) is None

@@ -14,10 +14,15 @@ Two problems these guard against, both measured on real match footage:
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from app.cv.tracker import _feet_on_surface, _playing_surface_mask
-from app.services.analysis_service import _drop_static_overlay_tracks
+from app.services.analysis_service import (
+    _drop_short_tracks,
+    _drop_static_overlay_tracks,
+    _on_pitch,
+    _player_feet,
+    _strip_discarded_tracks,
+)
 
 FRAME_H, FRAME_W = 360, 640
 
@@ -112,3 +117,42 @@ def test_real_players_survive_alongside_an_overlay():
 def test_zero_height_frame_is_handled():
     tracks = {1: _track(100, 10, 10, 0.0)}
     assert _drop_static_overlay_tracks(tracks, 0) == []
+
+
+# --- in-pitch filter and short tracks -----------------------------------
+
+
+def test_on_pitch_keeps_the_centre_and_rejects_the_stands():
+    assert _on_pitch(50.0, 50.0)
+    assert _on_pitch(0.0, 0.0)
+    assert _on_pitch(100.0, 100.0)
+    assert not _on_pitch(-10.0, 50.0)
+    assert not _on_pitch(50.0, 130.0)
+
+
+def test_player_feet_are_the_bottom_centre_of_the_box():
+    assert _player_feet([10.0, 20.0, 30.0, 80.0]) == (20.0, 80.0)
+
+
+def test_flicker_tracks_are_dropped_and_real_ones_kept():
+    tracks = {
+        1: _track(20, 300, 250, 1.5),
+        2: _track(2, 150, 200, 2.0),
+        3: _track(8, 400, 280, 0.8),
+    }
+    removed = _drop_short_tracks(tracks, min_samples=8)
+    assert removed == [2]
+    assert set(tracks) == {1, 3}
+
+
+def test_discarded_ids_are_stripped_from_every_frame():
+    class _Obj:
+        def __init__(self, track_id: int):
+            self.track_id = track_id
+
+    per_frame = [(0.0, [_Obj(1), _Obj(2)]), (0.2, [_Obj(2)])]
+    crops = {1: ["a"], 2: ["b"]}
+    stripped = _strip_discarded_tracks(per_frame, {2}, crops)
+    assert [o.track_id for o in stripped[0][1]] == [1]
+    assert stripped[1][1] == []
+    assert 2 not in crops

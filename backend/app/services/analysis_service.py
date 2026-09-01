@@ -27,7 +27,7 @@ from sqlalchemy.orm import Session
 from app.analytics import advantages, events as events_engine, formations, possession, spacing
 from app.analytics.zones import x_third
 from app.core.config import Settings
-from app.cv.field_mapper import FieldMapper
+from app.cv.field_mapper import FieldMapper, estimate_pitch_image_corners
 from app.cv.team_classifier import TeamClassifier
 from app.cv.tracker import Tracker, build_tracker
 from app.models.analysis import Analysis
@@ -60,6 +60,55 @@ def _update(db: Session, analysis: Analysis, **fields) -> None:
 GRAPHIC_MIN_SAMPLES = 50
 GRAPHIC_MAX_FEET_FRACTION = 0.25
 GRAPHIC_MAX_SPREAD_PX = 120.0
+
+# Keep detections whose mapped feet sit on the pitch, plus a little slack so
+# a box that slightly straddles the touchline is not dropped.
+_PITCH_MARGIN = 2.0
+
+
+def _on_pitch(field_x: float, field_y: float, margin: float = _PITCH_MARGIN) -> bool:
+    return -margin <= field_x <= 100.0 + margin and -margin <= field_y <= 100.0 + margin
+
+
+def _player_feet(bbox: list[float]) -> tuple[float, float]:
+    """Image-space point used for pitch mapping: bottom-centre of the box."""
+    x1, _, x2, y2 = bbox
+    return ((x1 + x2) / 2.0, y2)
+
+
+def _drop_short_tracks(
+    trajectories: dict[int, list[dict]], min_samples: int
+) -> list[int]:
+    """Remove tracks that only flickered for a handful of frames.
+
+    ByteTrack minting a new id on a miss is the usual source of "40 players"
+    on an 11-a-side pitch — those fragments never last a full second.
+    """
+    if min_samples <= 1:
+        return []
+
+    removed: list[int] = []
+    for track_id, frames in list(trajectories.items()):
+        if len(frames) < min_samples:
+            del trajectories[track_id]
+            removed.append(track_id)
+    return removed
+
+
+def _strip_discarded_tracks(
+    per_frame_tracks: list[tuple[float, list]],
+    discarded: set[int],
+    track_crops: dict[int, list] | None = None,
+) -> list[tuple[float, list]]:
+    if not discarded:
+        return per_frame_tracks
+    if track_crops is not None:
+        for track_id in discarded:
+            track_crops.pop(track_id, None)
+    return [
+        (ts, [o for o in objects if o.track_id not in discarded])
+        for ts, objects in per_frame_tracks
+    ]
 
 
 def _drop_static_overlay_tracks(
@@ -150,6 +199,7 @@ def run_analysis(analysis_id: str, db: Session, settings: Settings) -> None:
 
         field_mapper = FieldMapper()
         field_mapper.calculate_homography(metadata.width, metadata.height)
+        pitch_fitted = False
 
         player_trajectory: dict[int, list[dict]] = defaultdict(list)
         ball_trajectory: list[dict] = []
@@ -160,7 +210,7 @@ def run_analysis(analysis_id: str, db: Session, settings: Settings) -> None:
         _update(db, analysis, stage="tracking_players", progress=15)
 
         # A coach who names a window expects that window. The default budget
-        # only covers 60 seconds at 5 fps, so applying it to an explicit
+        # only covers 60 seconds at 8 fps, so applying it to an explicit
         # request truncated it silently — a 5:00-7:00 ask returned 5:00-6:00
         # while the UI still called it "the passage you asked for".
         max_frames = _frame_budget(analysis, settings)
@@ -178,14 +228,29 @@ def run_analysis(analysis_id: str, db: Session, settings: Settings) -> None:
                 )
                 break
 
+            if not pitch_fitted:
+                corners = estimate_pitch_image_corners(sampled.image)
+                if corners is not None:
+                    field_mapper.calculate_homography(
+                        metadata.width, metadata.height, corners
+                    )
+                    logger.info(
+                        "Analysis %s: pitch corners from playing surface %s",
+                        analysis_id,
+                        [[round(c, 1) for c in corner] for corner in corners],
+                    )
+                pitch_fitted = True
+
             tracked_objects = tracker.update(sampled.image)
-            frame_players = []
+            kept_objects = []
 
             for obj in tracked_objects:
                 x1, y1, x2, y2 = [max(0, int(v)) for v in obj.bbox]
-                field_x, field_y = field_mapper.image_to_field(tuple(obj.center))
 
                 if obj.class_name == "player":
+                    field_x, field_y = field_mapper.image_to_field(_player_feet(obj.bbox))
+                    if not _on_pitch(field_x, field_y):
+                        continue
                     entry = {
                         "track_id": obj.track_id,
                         "timestamp": round(sampled.timestamp, 3),
@@ -196,7 +261,7 @@ def run_analysis(analysis_id: str, db: Session, settings: Settings) -> None:
                         "field_y": round(field_y, 2),
                     }
                     player_trajectory[obj.track_id].append(entry)
-                    frame_players.append(entry)
+                    kept_objects.append(obj)
 
                     if len(track_crops[obj.track_id]) < CROPS_PER_TRACK and x2 > x1 and y2 > y1:
                         crop = sampled.image[y1:y2, x1:x2].copy()
@@ -204,6 +269,7 @@ def run_analysis(analysis_id: str, db: Session, settings: Settings) -> None:
                             track_crops[obj.track_id].append(crop)
 
                 elif obj.class_name == "ball":
+                    field_x, field_y = field_mapper.image_to_field(tuple(obj.center))
                     ball_trajectory.append(
                         {
                             "timestamp": round(sampled.timestamp, 3),
@@ -214,8 +280,9 @@ def run_analysis(analysis_id: str, db: Session, settings: Settings) -> None:
                             "field_y": round(field_y, 2),
                         }
                     )
+                    kept_objects.append(obj)
 
-            per_frame_tracks.append((sampled.timestamp, tracked_objects))
+            per_frame_tracks.append((sampled.timestamp, kept_objects))
             annotated_frames.append(sampled.image)  # team labels drawn in a second pass, once known
             processed_count += 1
 
@@ -223,15 +290,21 @@ def run_analysis(analysis_id: str, db: Session, settings: Settings) -> None:
                 progress = 15 + int(25 * processed_count / max_frames)
                 _update(db, analysis, progress=min(40, progress))
 
+        min_track_samples = max(4, int(round(settings.processing_fps)))
+        short_ids = _drop_short_tracks(player_trajectory, min_track_samples)
+        per_frame_tracks = _strip_discarded_tracks(per_frame_tracks, set(short_ids), track_crops)
+        if short_ids:
+            logger.info(
+                "Analysis %s: discarded %d short-lived track(s) shorter than %d "
+                "samples — these are almost certainly ByteTrack identity splits",
+                analysis_id,
+                len(short_ids),
+                min_track_samples,
+            )
+
         overlay_ids = _drop_static_overlay_tracks(player_trajectory, metadata.height)
+        per_frame_tracks = _strip_discarded_tracks(per_frame_tracks, set(overlay_ids), track_crops)
         if overlay_ids:
-            # These also feed the metrics snapshots and the annotated overlay,
-            # so drop them everywhere rather than only from the trajectories.
-            discarded = set(overlay_ids)
-            per_frame_tracks = [
-                (ts, [o for o in objects if o.track_id not in discarded])
-                for ts, objects in per_frame_tracks
-            ]
             logger.info(
                 "Analysis %s: discarded %d static-overlay track(s) %s — these sit "
                 "still near the top of frame and are almost certainly broadcast "
@@ -384,7 +457,9 @@ def _build_snapshots(
         for obj in tracked_objects:
             if obj.class_name != "player":
                 continue
-            field_x, field_y = field_mapper.image_to_field(tuple(obj.center))
+            field_x, field_y = field_mapper.image_to_field(_player_feet(obj.bbox))
+            if not _on_pitch(field_x, field_y):
+                continue
             team_info = team_by_track.get(obj.track_id, {"team": "unknown", "confidence": 0.0})
             players_by_id[obj.track_id] = {
                 "track_id": obj.track_id,

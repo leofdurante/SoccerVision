@@ -19,6 +19,10 @@ import numpy as np
 FIELD_WIDTH = 100.0
 FIELD_HEIGHT = 100.0
 
+# Fraction of the frame that must look like turf before we trust the mask
+# as the pitch (otherwise fall back to the full frame).
+_MIN_TURF_COVERAGE = 0.15
+
 # Destination points: the four pitch corners in normalized space, in the
 # same order as the image-space source points must be supplied
 # (top-left, top-right, bottom-right, bottom-left).
@@ -35,6 +39,30 @@ _PITCH_CORNERS = np.array(
 
 class FieldMappingError(RuntimeError):
     pass
+
+
+def estimate_pitch_image_corners(frame: np.ndarray) -> list[list[float]] | None:
+    """Bounding rectangle of the playing surface in pixel space.
+
+    Returns the 4-point order expected by `FieldMapper.calculate_homography`,
+    or None when the turf mask is too small to trust (dark indoor shot,
+    failed colour filter). Callers should keep the full-frame default.
+    """
+    from app.cv.tracker import _playing_surface_mask
+
+    mask = _playing_surface_mask(frame)
+    ys, xs = np.where(mask > 0)
+    if mask.size == 0 or (len(xs) / mask.size) < _MIN_TURF_COVERAGE:
+        return None
+
+    x_min, x_max = float(xs.min()), float(xs.max())
+    y_min, y_max = float(ys.min()), float(ys.max())
+    return [
+        [x_min, y_min],
+        [x_max, y_min],
+        [x_max, y_max],
+        [x_min, y_max],
+    ]
 
 
 class FieldMapper:

@@ -1,6 +1,6 @@
 """Player/ball/referee detection.
 
-Wraps Ultralytics YOLOv8 (COCO-pretrained `yolov8n.pt` by default — see
+Wraps Ultralytics YOLOv8 (COCO-pretrained `yolov8s.pt` by default — see
 .env.example for rationale) behind a small `Detector` interface so the
 rest of the app never imports `ultralytics` directly and the model can be
 swapped for a soccer-specific fine-tuned checkpoint later without
@@ -58,7 +58,7 @@ class Detector(Protocol):
 class YoloDetector:
     """Ultralytics YOLOv8-backed implementation of `Detector`."""
 
-    def __init__(self, model_path: str, confidence_threshold: float = 0.25, imgsz: int = 1280):
+    def __init__(self, model_path: str, confidence_threshold: float = 0.45, imgsz: int = 1280):
         self.confidence_threshold = confidence_threshold
         self.imgsz = imgsz
         self._model = None
