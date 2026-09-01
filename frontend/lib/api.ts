@@ -36,6 +36,8 @@ export function apiUrl(path: string): string {
 export interface AnalysisWindowRequest {
   startSeconds?: number;
   endSeconds?: number;
+  homeKitHex?: string;
+  awayKitHex?: string;
 }
 
 export async function uploadVideo(
@@ -49,6 +51,12 @@ export async function uploadVideo(
   }
   if (window.endSeconds !== undefined) {
     formData.append("end_seconds", String(window.endSeconds));
+  }
+  if (window.homeKitHex) {
+    formData.append("home_kit_hex", window.homeKitHex);
+  }
+  if (window.awayKitHex) {
+    formData.append("away_kit_hex", window.awayKitHex);
   }
 
   const response = await fetch(apiUrl("/api/v1/analyses"), {

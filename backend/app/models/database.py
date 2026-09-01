@@ -71,6 +71,8 @@ def _add_missing_columns() -> None:
         "analyses": {
             "analysis_start_seconds": "FLOAT",
             "analysis_end_seconds": "FLOAT",
+            "home_kit_hex": "VARCHAR",
+            "away_kit_hex": "VARCHAR",
         },
     }
 

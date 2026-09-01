@@ -126,3 +126,22 @@ def test_rejects_a_negative_window_start(client):
         data={"start_seconds": "-30"},
     )
     assert response.status_code == 422
+
+
+def test_rejects_only_one_kit_colour(client):
+    response = client.post(
+        "/api/v1/analyses",
+        files={"file": ("clip.mp4", io.BytesIO(b"irrelevant"), "video/mp4")},
+        data={"home_kit_hex": "#1d4ed8"},
+    )
+    assert response.status_code == 400
+    assert "together" in response.json()["detail"]
+
+
+def test_rejects_a_malformed_kit_colour(client):
+    response = client.post(
+        "/api/v1/analyses",
+        files={"file": ("clip.mp4", io.BytesIO(b"irrelevant"), "video/mp4")},
+        data={"home_kit_hex": "blue", "away_kit_hex": "#dc2626"},
+    )
+    assert response.status_code == 400

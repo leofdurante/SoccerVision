@@ -10,6 +10,11 @@ import {
   resolveRange,
   type AnalysisRange,
 } from "@/components/AnalysisRangePicker";
+import {
+  KitColorPicker,
+  DEFAULT_KIT_COLORS,
+  type KitColors,
+} from "@/components/KitColorPicker";
 
 const ACCEPTED_EXTENSIONS = [".mp4", ".mov", ".avi"];
 
@@ -29,6 +34,7 @@ export function UploadForm() {
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [range, setRange] = useState<AnalysisRange>(DEFAULT_RANGE);
+  const [kits, setKits] = useState<KitColors>(DEFAULT_KIT_COLORS);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,6 +70,9 @@ export function UploadForm() {
       const { analysis_id } = await uploadVideo(file, {
         startSeconds: resolved.startSeconds,
         endSeconds: resolved.endSeconds,
+        ...(kits.enabled
+          ? { homeKitHex: kits.home, awayKitHex: kits.away }
+          : {}),
       });
       router.push(`/analysis/${analysis_id}`);
     } catch (err) {
@@ -72,7 +81,7 @@ export function UploadForm() {
       );
       setUploading(false);
     }
-  }, [file, range, router]);
+  }, [file, range, kits, router]);
 
   return (
     <div className="flex w-full flex-col gap-3">
@@ -136,6 +145,8 @@ export function UploadForm() {
           </div>
 
           <AnalysisRangePicker value={range} onChange={setRange} disabled={uploading} />
+
+          <KitColorPicker value={kits} onChange={setKits} disabled={uploading} />
 
           <button
             type="button"

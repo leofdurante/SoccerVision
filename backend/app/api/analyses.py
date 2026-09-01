@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
+from app.cv.team_classifier import parse_hex_to_hsv
 from app.models.analysis import Analysis
 from app.models.database import get_db
 from app.schemas.analysis import (
@@ -56,6 +57,12 @@ async def create_analysis(
     end_seconds: float | None = Form(
         None, gt=0, description="Stop analysing at this offset. Omit to run until the frame budget is spent."
     ),
+    home_kit_hex: str | None = Form(
+        None, description="Home shirt colour as #RRGGBB. Must be sent with away_kit_hex."
+    ),
+    away_kit_hex: str | None = Form(
+        None, description="Away shirt colour as #RRGGBB. Must be sent with home_kit_hex."
+    ),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> AnalysisCreateResponse:
@@ -67,6 +74,22 @@ async def create_analysis(
             status_code=400,
             detail="The end of the analysis window must come after its start.",
         )
+
+    home_hex = (home_kit_hex or "").strip() or None
+    away_hex = (away_kit_hex or "").strip() or None
+    if (home_hex is None) != (away_hex is None):
+        raise HTTPException(
+            status_code=400,
+            detail="Home and away kit colours must be sent together.",
+        )
+    if home_hex and away_hex:
+        try:
+            parse_hex_to_hsv(home_hex)
+            parse_hex_to_hsv(away_hex)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        home_hex = home_hex if home_hex.startswith("#") else f"#{home_hex}"
+        away_hex = away_hex if away_hex.startswith("#") else f"#{away_hex}"
 
     try:
         suffix = validate_filename(file.filename)
@@ -81,6 +104,8 @@ async def create_analysis(
         progress=0,
         analysis_start_seconds=start_seconds,
         analysis_end_seconds=end_seconds,
+        home_kit_hex=home_hex,
+        away_kit_hex=away_hex,
     )
     db.add(analysis)
     db.commit()

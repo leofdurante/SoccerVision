@@ -29,7 +29,7 @@ from app.analytics.zones import x_third
 from app.core.config import Settings
 from app.cv.field_mapper import FieldMapper
 from app.cv.pitch_view import estimate_visible_pitch
-from app.cv.team_classifier import TeamClassifier
+from app.cv.team_classifier import TeamClassifier, parse_hex_to_hsv
 from app.cv.tracker import Tracker, build_tracker
 from app.models.analysis import Analysis
 from app.services.ai_analyst import build_insight_generator
@@ -332,9 +332,21 @@ def run_analysis(analysis_id: str, db: Session, settings: Settings) -> None:
         # --- classifying_teams ---------------------------------------------
         _update(db, analysis, stage="classifying_teams", progress=45)
         team_by_track: dict[int, dict] = {}
-        classifier = TeamClassifier()
+        kit_colors = None
+        if analysis.home_kit_hex and analysis.away_kit_hex:
+            kit_colors = {
+                "home": parse_hex_to_hsv(analysis.home_kit_hex),
+                "away": parse_hex_to_hsv(analysis.away_kit_hex),
+            }
+            logger.info(
+                "Analysis %s: matching shirts to kits home=%s away=%s",
+                analysis_id,
+                analysis.home_kit_hex,
+                analysis.away_kit_hex,
+            )
+        classifier = TeamClassifier(manual_team_colors=kit_colors)
         all_crops = [crop for crops in track_crops.values() for crop in crops]
-        fitted = classifier.fit(all_crops) if all_crops else False
+        fitted = classifier.fit(all_crops) if all_crops else classifier.filters_non_kit
 
         for track_id, crops in track_crops.items():
             if not fitted or not crops:
@@ -344,11 +356,38 @@ def run_analysis(analysis_id: str, db: Session, settings: Settings) -> None:
             for crop in crops:
                 result = classifier.classify(crop)
                 votes[result["team"]].append(result["confidence"])
-            best_team = max(votes.items(), key=lambda kv: len(kv[1]))
+            kit_votes = {team: confs for team, confs in votes.items() if team != "unknown"}
+            n_votes = sum(len(confs) for confs in votes.values())
+            if kit_votes:
+                best_team = max(kit_votes.items(), key=lambda kv: len(kv[1]))
+                if len(best_team[1]) < max(1, n_votes / 3):
+                    best_team = ("unknown", votes.get("unknown", [0.0]))
+            else:
+                best_team = ("unknown", votes.get("unknown", [0.0]))
             team_by_track[track_id] = {
                 "team": best_team[0],
                 "confidence": round(sum(best_team[1]) / len(best_team[1]), 3),
             }
+
+        if classifier.filters_non_kit:
+            off_kit_ids = [
+                track_id
+                for track_id, info in team_by_track.items()
+                if info["team"] == "unknown"
+            ]
+            for track_id in off_kit_ids:
+                player_trajectory.pop(track_id, None)
+                team_by_track.pop(track_id, None)
+            per_frame_tracks = _strip_discarded_tracks(
+                per_frame_tracks, set(off_kit_ids), track_crops
+            )
+            if off_kit_ids:
+                logger.info(
+                    "Analysis %s: discarded %d track(s) whose shirts did not match "
+                    "home or away — refs, coaches and fans in other colours",
+                    analysis_id,
+                    len(off_kit_ids),
+                )
 
         for track_id, frames in player_trajectory.items():
             team_info = team_by_track.get(track_id, {"team": "unknown", "confidence": 0.0})

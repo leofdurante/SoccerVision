@@ -51,6 +51,11 @@ class Analysis(Base):
     analysis_start_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
     analysis_end_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
 
+    # Optional kit colours the coach picked on upload ("#rrggbb"). When both
+    # are set, tracks whose shirts match neither are dropped (refs/coaches/fans).
+    home_kit_hex: Mapped[str | None] = mapped_column(String, nullable=True)
+    away_kit_hex: Mapped[str | None] = mapped_column(String, nullable=True)
+
     # Pipeline results (populated progressively as stages complete)
     players: Mapped[list | None] = mapped_column(JSON, nullable=True)
     ball_positions: Mapped[list | None] = mapped_column(JSON, nullable=True)
