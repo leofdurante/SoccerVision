@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; font-family: Archivo, system-ui, "Helvetica Neue", sans-serif; }
+    a { color: oklch(0.712 0.126 148); } a:hover { color: oklch(0.830 0.118 148); }
+    .stat { display: flex; flex-direction: column; gap: 10px; background: oklch(0.216 0.014 150);
+            border: 1px solid oklch(0.312 0.018 150); border-radius: 14px; padding: 24px; }
+    .statlabel { font-size: 13.5px; font-weight: 500; color: oklch(0.762 0.014 135); line-height: 1.4; }
+    .statnums { display: flex; align-items: baseline; gap: 12px;
+                font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+    .from { font-size: 30px; color: oklch(0.618 0.016 140); }
+    .to   { font-size: 48px; font-weight: 500; color: oklch(0.712 0.126 148); letter-spacing: -0.02em; }
+    .note { font-size: 13px; color: oklch(0.618 0.016 140); line-height: 1.45; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; height: 720px; background: oklch(0.178 0.012 150); color: oklch(0.955 0.010 130); display: flex; flex-direction: column; gap: 28px; padding: 60px 64px; box-sizing: border-box;">
+
+  <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 40px;">
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: oklch(0.712 0.126 148);">The experimentation loop</span>
+      <h2 style="margin: 0; font-size: 44px; font-weight: 600; letter-spacing: -0.028em;">Every number here was measured</h2>
+    </div>
+    <span style="font-size: 14px; color: oklch(0.618 0.016 140); font-family: 'IBM Plex Mono', ui-monospace, monospace; white-space: nowrap; padding-bottom: 6px;">
+      same 2-minute passage, before &rarr; after
+    </span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px;">
+    <div class="stat">
+      <span class="statlabel">Players detected per frame</span>
+      <span class="statnums"><span class="from">6.0</span><span class="to">12.3</span></span>
+      <span class="note">Root cause: a player is ~30&nbsp;px tall at 640. Upscaling inference to 1280 was the lever, not the model.</span>
+    </div>
+    <div class="stat">
+      <span class="statlabel">Track identities for ~22 players</span>
+      <span class="statnums"><span class="from">374</span><span class="to">180</span></span>
+      <span class="note">ByteTrack&rsquo;s defaults assume 30&nbsp;fps. We sample at 5. Retuned on a 150-frame sweep.</span>
+    </div>
+    <div class="stat">
+      <span class="statlabel">Ball detections in the window</span>
+      <span class="statnums"><span class="from">0</span><span class="to">57</span></span>
+      <span class="note">Upscaling lifted the ball over the detector&rsquo;s floor, which turned possession into a real estimate.</span>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 20px; align-items: stretch; flex-grow: 1;">
+    <div style="display: flex; flex-direction: column; justify-content: center; gap: 14px; background: oklch(0.216 0.014 150); border: 1px solid oklch(0.312 0.018 150); border-radius: 14px; padding: 24px 28px; flex-grow: 1;">
+      <span style="font-size: 13.5px; font-weight: 500; color: oklch(0.762 0.014 135);">Median track lifetime</span>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 20px;">
+        <span style="color: oklch(0.618 0.016 140);">5 frames</span>
+        <span style="color: oklch(0.618 0.016 140); margin: 0 10px;">&rarr;</span>
+        <span style="color: oklch(0.712 0.126 148); font-size: 26px;">12 frames</span>
+      </span>
+    </div>
+    <div style="display: flex; flex-direction: column; justify-content: center; gap: 10px; background: oklch(0.268 0.032 148); border: 1px solid oklch(0.386 0.068 148); border-radius: 14px; padding: 24px 28px; flex: 2 1 0;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: oklch(0.712 0.126 148);">The counter-intuitive one</span>
+      <p style="margin: 0; font-size: 16.5px; line-height: 1.55; color: oklch(0.955 0.010 130); text-wrap: pretty;">
+        ByteTrack&rsquo;s <code style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 15px; color: oklch(0.830 0.118 148);">fuse_score</code>
+        had to be turned <strong style="font-weight: 600;">off</strong>. Folding confidence into the match
+        cost penalises exactly the weak-but-real detections that matter at this
+        resolution &mdash; it was costing a third of all tracked detections.
+      </p>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

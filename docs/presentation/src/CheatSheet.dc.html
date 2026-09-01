@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; font-family: Archivo, system-ui, "Helvetica Neue", sans-serif; }
+    a { color: oklch(0.44 0.10 148); } a:hover { color: oklch(0.34 0.08 148); }
+    .h { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+         color: oklch(0.44 0.10 148); border-bottom: 1.5px solid oklch(0.87 0.062 148);
+         padding-bottom: 5px; }
+    .row { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 12px;
+           font-size: 12.5px; line-height: 1.5; padding: 2px 0; }
+    .k { font-weight: 600; color: oklch(0.252 0.018 145); }
+    .v { color: oklch(0.40 0.016 145); }
+    code { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11.5px;
+           background: oklch(0.955 0.010 110); padding: 1px 4px; border-radius: 3px;
+           color: oklch(0.30 0.02 145); }
+  </style>
+</helmet>
+
+<div style="width: 816px; height: 1056px; background: oklch(0.988 0.005 110); color: oklch(0.252 0.018 145); display: flex; flex-direction: column; gap: 13px; padding: 34px 46px; box-sizing: border-box;">
+
+  <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; border-bottom: 2px solid oklch(0.252 0.018 145); padding-bottom: 9px;">
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <span style="font-size: 24px; font-weight: 700; letter-spacing: -0.025em;">SoccerVision &mdash; judge cheat sheet</span>
+      <span style="font-size: 12.5px; color: oklch(0.47 0.016 145);">Stack, pipeline, and the numbers behind each claim</span>
+    </div>
+    <span style="font-size: 11px; font-family: 'IBM Plex Mono', ui-monospace, monospace; color: oklch(0.55 0.014 145); white-space: nowrap;">1 / 2</span>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 5px;">
+    <span class="h">Pipeline &mdash; upload to read-out</span>
+    <div style="display: flex; flex-direction: column; gap: 0;">
+      <div class="row"><span class="k">1 &nbsp;Sample</span><span class="v"><code>video_processor.extract_frames()</code> &mdash; OpenCV, 5 fps, seeks to a requested window. Timestamps stay absolute (original video clock).</span></div>
+      <div class="row"><span class="k">2 &nbsp;Detect + track</span><span class="v"><code>cv/tracker.py</code> &mdash; one Ultralytics <code>model.track()</code> call: YOLOv8n (COCO <code>person</code>/<code>sports ball</code>) + ByteTrack, <code>persist=True</code>, <code>imgsz=1280</code>, <code>conf=0.25</code>.</span></div>
+      <div class="row"><span class="k">3 &nbsp;Filter</span><span class="v">Detections rejected when their <em>feet</em> are off turf (HSV grass mask). Post-pass drops static-overlay tracks &mdash; long-lived + high in frame + near-zero movement.</span></div>
+      <div class="row"><span class="k">4 &nbsp;Team split</span><span class="v"><code>cv/team_classifier.py</code> &mdash; k-means over shirt-region colour on cached per-track crops, so a track gets one team, not a per-frame flicker.</span></div>
+      <div class="row"><span class="k">5 &nbsp;Map</span><span class="v"><code>cv/field_mapper.py</code> &mdash; <code>cv2.getPerspectiveTransform</code>. <strong>Currently identity-cornered</strong>, so it is a linear rescale, not a registration. See limits below.</span></div>
+      <div class="row"><span class="k">6 &nbsp;Analytics</span><span class="v"><code>analytics/</code> &mdash; width, depth, avg spacing, compactness, defensive line height, third occupancy, zone overloads, events.</span></div>
+      <div class="row"><span class="k">7 &nbsp;Read-out</span><span class="v"><code>services/ai_analyst.py</code> &mdash; Anthropic Messages API over the <em>structured stats only</em>, never frames. Deterministic rule-based fallback if the key is absent or the call fails.</span></div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 5px;">
+    <span class="h">Stack</span>
+    <div style="display: flex; flex-direction: column; gap: 0;">
+      <div class="row"><span class="k">CV</span><span class="v">Ultralytics 8.4 (YOLOv8n, ByteTrack) &middot; OpenCV &middot; NumPy &middot; scikit-learn (k-means) &middot; ffmpeg (H.264 transcode)</span></div>
+      <div class="row"><span class="k">Backend</span><span class="v">FastAPI &middot; Python 3.12 &middot; SQLAlchemy + SQLite &middot; background task runs the pipeline off the event loop via <code>asyncio.to_thread</code></span></div>
+      <div class="row"><span class="k">Frontend</span><span class="v">Next.js 16 &middot; React 19 &middot; Tailwind v4 &middot; Plotly &middot; hand-drawn SVG pitch driven off the video element&rsquo;s clock</span></div>
+      <div class="row"><span class="k">LLM</span><span class="v">Anthropic SDK, structured output via JSON schema &mdash; stats in, 3&ndash;5 observations out</span></div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 5px;">
+    <span class="h">Numbers we can defend</span>
+    <div style="display: flex; flex-direction: column; gap: 0;">
+      <div class="row"><span class="k">Detection</span><span class="v">6.0 &rarr; 12.3 players/frame. Lever was <code>imgsz</code> 640&rarr;1280, not the model &mdash; a player is ~30 px tall at native res. Cost: 21 &rarr; 72 ms/frame.</span></div>
+      <div class="row"><span class="k">Ablation grid</span><span class="v">640/.40 = 6.0 &middot; 640/.25 = 8.2 &middot; 1280/.40 = 8.5 &middot; 1280/.25 = 12.3</span></div>
+      <div class="row"><span class="k">Tracking</span><span class="v">374 &rarr; 180 ids for ~22 players over 2 min. Median track 5 &rarr; 12 frames. Single-frame tracks 66 &rarr; 12.</span></div>
+      <div class="row"><span class="k">Tracker sweep</span><span class="v">150 real frames. defaults 106 ids/659 det &rarr; tuned 55 ids/801 det. Winning config in <code>cv/trackers/soccer_bytetrack.yaml</code>.</span></div>
+      <div class="row"><span class="k">Ball</span><span class="v">0 &rarr; 57 detections in a 2-min window &mdash; upscaling put it over the detector&rsquo;s floor. Below 25 detections we withhold possession rather than print a number.</span></div>
+      <div class="row"><span class="k">Throughput</span><span class="v">600 sampled frames (2 min of play) in ~60 s, CPU-only, no GPU in the loop.</span></div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 5px;">
+    <span class="h">Tracker config &mdash; and why each value</span>
+    <div style="display: flex; flex-direction: column; gap: 0;">
+      <div class="row"><span class="k"><code>match_thresh</code></span><span class="v">0.8 &rarr; <strong>0.95</strong>. Inter-frame displacement is only ~8% of a box height, so a missed match costs far more than a loose one.</span></div>
+      <div class="row"><span class="k"><code>fuse_score</code></span><span class="v">true &rarr; <strong>false</strong>. Folding confidence into match cost penalises the weak-but-real detections that matter at this resolution &mdash; worth ~a third of tracked detections.</span></div>
+      <div class="row"><span class="k"><code>new_track_thresh</code></span><span class="v">0.25 &rarr; <strong>0.6</strong>. A flicker now has to be genuinely confident before it becomes a new player. This is what stopped the id explosion.</span></div>
+      <div class="row"><span class="k"><code>track_buffer</code></span><span class="v">30 &rarr; <strong>60</strong>. At 5 fps that is 12 s of tolerance, so a briefly occluded player keeps their identity.</span></div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

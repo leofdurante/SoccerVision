@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; font-family: Archivo, system-ui, "Helvetica Neue", sans-serif; }
+    a { color: oklch(0.712 0.126 148); } a:hover { color: oklch(0.830 0.118 148); }
+    .nextitem { display: flex; flex-direction: column; gap: 6px; padding-top: 16px; border-top: 2px solid oklch(0.386 0.068 148); }
+    .nexttitle { font-size: 18px; font-weight: 600; letter-spacing: -0.015em; }
+    .nexttext { font-size: 14.5px; line-height: 1.55; color: oklch(0.762 0.014 135); }
+  </style>
+</helmet>
+
+<div style="width: 1280px; height: 720px; background: oklch(0.178 0.012 150); color: oklch(0.955 0.010 130); display: flex; flex-direction: column; gap: 34px; padding: 60px 64px; box-sizing: border-box;">
+
+  <div style="display: flex; flex-direction: column; gap: 9px;">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: oklch(0.712 0.126 148);">Where it goes</span>
+    <h2 style="margin: 0; font-size: 44px; font-weight: 600; letter-spacing: -0.028em;">What we&rsquo;d build next</h2>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px;">
+    <div class="nextitem">
+      <span class="nexttitle">Appearance-based re-ID</span>
+      <span class="nexttext">
+        IoU association is the ceiling we hit. 180 identities for 22 players means
+        embeddings, not geometry &mdash; the exact bullet in the posting.
+      </span>
+    </div>
+    <div class="nextitem">
+      <span class="nexttitle">Pitch registration</span>
+      <span class="nexttext">
+        The yard lines that break line-detection are regularly spaced and numbered.
+        They could give drift-free absolute position instead.
+      </span>
+    </div>
+    <div class="nextitem">
+      <span class="nexttitle">A fixed-camera path</span>
+      <span class="nexttext">
+        Every commercial system requires one. With a static wide camera the homography
+        is a one-time four-corner calibration.
+      </span>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; justify-content: center; gap: 18px; background: oklch(0.268 0.032 148); border: 1px solid oklch(0.386 0.068 148); border-radius: 16px; padding: 34px 38px; flex-grow: 1;">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: oklch(0.712 0.126 148);">What we actually practised</span>
+    <p style="margin: 0; font-size: 27px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; text-wrap: pretty; max-width: 940px;">
+      The posting asks for hypotheses, ablations, error analysis and measurable
+      improvements. Every number in this deck came out of that loop &mdash;
+      including the two approaches we threw away.
+    </p>
+  </div>
+
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 32px; border-top: 1px solid oklch(0.312 0.018 150); padding-top: 20px;">
+    <span style="font-size: 15px; color: oklch(0.762 0.014 135);">SoccerVision &mdash; [TEAM NAMES]</span>
+    <span style="font-size: 14px; color: oklch(0.618 0.016 140); font-family: 'IBM Plex Mono', ui-monospace, monospace;">github.com/leofdurante/SoccerVision</span>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

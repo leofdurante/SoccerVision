@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SoccerVision — hackathon deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: oklch(0.128 0.010 150);
+                font-family: Archivo, system-ui, "Helvetica Neue", sans-serif; }
+  #stage { position: fixed; inset: 0; display: grid; place-items: center; overflow: hidden; }
+  .slide { width: 1280px; height: 720px; flex: none; display: none;
+            transform-origin: center center; box-shadow: 0 24px 80px -30px rgb(0 0 0 / 0.8); }
+  .slide.current { display: block; }
+  #hud { position: fixed; left: 0; right: 0; bottom: 0; display: flex; align-items: center;
+          justify-content: space-between; gap: 16px; padding: 10px 18px;
+          font-size: 12px; color: oklch(0.55 0.014 145); pointer-events: none; }
+  #hud kbd { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px;
+              border: 1px solid oklch(0.32 0.016 150); border-radius: 4px; padding: 1px 5px; }
+  #count { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  a { color: oklch(0.712 0.126 148); }
+  a:hover { color: oklch(0.830 0.118 148); }
+  .step { display: flex; flex-direction: column; gap: 8px; background: oklch(0.216 0.014 150); border: 1px solid oklch(0.312 0.018 150); border-radius: 12px; padding: 22px 16px; flex-grow: 1; }
+  .stepname { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+  .steptech { font-size: 13px; line-height: 1.45; color: oklch(0.618 0.016 140); font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  .stat { display: flex; flex-direction: column; gap: 10px; background: oklch(0.216 0.014 150); border: 1px solid oklch(0.312 0.018 150); border-radius: 14px; padding: 24px; }
+  .statlabel { font-size: 13.5px; font-weight: 500; color: oklch(0.762 0.014 135); line-height: 1.4; }
+  .statnums { display: flex; align-items: baseline; gap: 12px; font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  .from { font-size: 30px; color: oklch(0.618 0.016 140); }
+  .to { font-size: 48px; font-weight: 500; color: oklch(0.712 0.126 148); letter-spacing: -0.02em; }
+  .note { font-size: 13px; color: oklch(0.618 0.016 140); line-height: 1.45; }
+  .find { display: flex; gap: 18px; align-items: flex-start; }
+  .findnum { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 15px; color: oklch(0.640 0.112 148); padding-top: 3px; min-width: 26px; }
+  .findbody { display: flex; flex-direction: column; gap: 5px; }
+  .findtitle { font-size: 19px; font-weight: 600; letter-spacing: -0.015em; }
+  .findtext { font-size: 15.5px; line-height: 1.55; color: oklch(0.762 0.014 135); text-wrap: pretty; }
+  .nextitem { display: flex; flex-direction: column; gap: 6px; padding-top: 16px; border-top: 2px solid oklch(0.386 0.068 148); }
+  .nexttitle { font-size: 18px; font-weight: 600; letter-spacing: -0.015em; }
+  .nexttext { font-size: 14.5px; line-height: 1.55; color: oklch(0.762 0.014 135); }
+  @media print {
+    @page { size: 1280px 720px; margin: 0; }
+    html, body { height: auto; background: #fff; }
+    #stage { position: static; display: block; overflow: visible; }
+    #hud { display: none; }
+    .slide { display: block !important; transform: none !important;
+              break-after: page; box-shadow: none; }
+    .slide:last-child { break-after: auto; }
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+<section class="slide" data-label="Title" aria-label="Slide 1: Title">
+<div style="width: 1280px; height: 720px; background: oklch(0.178 0.012 150); color: oklch(0.955 0.010 130); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; padding: 64px; box-sizing: border-box;">
+
+  <div style="position: absolute; right: -140px; top: -80px; width: 720px; height: 720px; opacity: 0.09; pointer-events: none;">
+    <svg viewBox="0 0 400 400" width="720" height="720" fill="none" stroke="oklch(0.712 0.126 148)" stroke-width="2">
+      <rect x="20" y="60" width="360" height="280" rx="4" />
+      <line x1="200" y1="60" x2="200" y2="340" />
+      <circle cx="200" cy="200" r="58" />
+      <rect x="20" y="128" width="62" height="144" />
+      <rect x="318" y="128" width="62" height="144" />
+    </svg>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 14px; position: relative;">
+    <svg width="38" height="38" viewBox="0 0 32 32" fill="none">
+      <rect width="32" height="32" rx="8.5" fill="oklch(0.508 0.105 148)" />
+      <g stroke="oklch(0.99 0.012 148)" stroke-width="1.6" stroke-linecap="round" fill="none">
+        <path d="M16 5.6v20.8" />
+        <circle cx="16" cy="16" r="5.2" />
+      </g>
+    </svg>
+    <span style="font-size: 19px; font-weight: 600; letter-spacing: -0.02em;">SoccerVision</span>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 26px; position: relative; max-width: 800px;">
+    <h1 style="margin: 0; font-size: 78px; font-weight: 700; line-height: 1.02; letter-spacing: -0.035em;">
+      Match film in.<br />Tactical data out.
+    </h1>
+    <p style="margin: 0; font-size: 22px; line-height: 1.5; color: oklch(0.762 0.014 135); max-width: 620px;">
+      Computer-vision analysis for high-school and club soccer film — detection,
+      tracking, and team shape from a single uploaded video.
+    </p>
+  </div>
+
+  <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; position: relative; border-top: 1px solid oklch(0.312 0.018 150); padding-top: 22px;">
+    <div style="display: flex; flex-direction: column; gap: 7px;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: oklch(0.618 0.016 140);">Built against a real posting</span>
+      <span style="font-size: 19px; font-weight: 500;">SumerSports &mdash; Sports Computer Vision Engineer</span>
+    </div>
+    <span style="font-size: 15px; color: oklch(0.618 0.016 140); font-family: 'IBM Plex Mono', ui-monospace, monospace;">[TEAM NAMES]</span>
+  </div>
+
+</div>
+</section>
+<section class="slide" data-label="Role & skill" aria-label="Slide 2: Role & skill">
+<div style="width: 1280px; height: 720px; background: oklch(0.178 0.012 150); color: oklch(0.955 0.010 130); display: flex; flex-direction: column; gap: 30px; padding: 60px 64px; box-sizing: border-box;">
+
+  <div style="display: flex; flex-direction: column; gap: 10px;">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: oklch(0.712 0.126 148);">The assignment</span>
+    <h2 style="margin: 0; font-size: 44px; font-weight: 600; letter-spacing: -0.028em; line-height: 1.1;">
+      Pick a job. Pick the skill you can&rsquo;t fake. Build it.
+    </h2>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; flex-grow: 1;">
+
+    <div style="display: flex; flex-direction: column; gap: 16px; background: oklch(0.216 0.014 150); border: 1px solid oklch(0.312 0.018 150); border-radius: 14px; padding: 28px;">
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: oklch(0.618 0.016 140);">The posting</span>
+        <span style="font-size: 21px; font-weight: 600;">Sports Computer Vision Engineer</span>
+        <span style="font-size: 15px; color: oklch(0.762 0.014 135);">SumerSports &middot; football intelligence for NFL clubs</span>
+      </div>
+      <p style="margin: 0; font-size: 16.5px; line-height: 1.6; color: oklch(0.762 0.014 135); border-left: 2px solid oklch(0.386 0.068 148); padding-left: 16px; text-wrap: pretty;">
+        &ldquo;Build and train CV models for sports video: player/ball detection,
+        multi-object tracking, pose/keypoints, event recognition,
+        <strong style="color: oklch(0.955 0.010 130); font-weight: 600;">identity association (re-ID)</strong>.&rdquo;
+      </p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 16px; background: oklch(0.268 0.032 148); border: 1px solid oklch(0.386 0.068 148); border-radius: 14px; padding: 28px;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: oklch(0.712 0.126 148);">The skill we chose</span>
+      <span style="font-size: 30px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.15;">Multi-object tracking &amp; identity association</span>
+      <p style="margin: 0; font-size: 16.5px; line-height: 1.6; color: oklch(0.830 0.118 148);">
+        Detecting a player is one model call. Keeping the <em>same</em> player
+        across 600 frames is the actual problem.
+      </p>
+    </div>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 20px; border-top: 1px solid oklch(0.312 0.018 150); padding-top: 22px;">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: oklch(0.618 0.016 140); white-space: nowrap;">Why that one</span>
+    <p style="margin: 0; font-size: 18px; line-height: 1.5; color: oklch(0.955 0.010 130); text-wrap: pretty;">
+      The posting asks for &ldquo;hands-on model development &mdash;
+      <strong style="color: oklch(0.712 0.126 148); font-weight: 600;">not just running existing repos</strong>.&rdquo;
+      You can only answer that with error analysis and numbers.
+    </p>
+  </div>
+
+</div>
+</section>
+<section class="slide" data-label="Pipeline" aria-label="Slide 3: Pipeline">
+<div style="width: 1280px; height: 720px; background: oklch(0.178 0.012 150); color: oklch(0.955 0.010 130); display: flex; flex-direction: column; gap: 32px; padding: 60px 64px; box-sizing: border-box;">
+
+  <div style="display: flex; flex-direction: column; gap: 10px;">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: oklch(0.712 0.126 148);">What we built</span>
+    <h2 style="margin: 0; font-size: 44px; font-weight: 600; letter-spacing: -0.028em;">One upload, seven stages</h2>
+  </div>
+
+  <div style="display: flex; flex-direction: column; justify-content: center; gap: 40px; flex-grow: 1;">
+
+  <div style="display: flex; align-items: stretch; gap: 10px;">
+    <div class="step"><span class="stepname">Sample</span><span class="steptech">OpenCV<br />5 fps, seekable window</span></div>
+    <div class="step"><span class="stepname">Detect</span><span class="steptech">YOLOv8n<br />imgsz 1280, conf .25</span></div>
+    <div class="step"><span class="stepname">Track</span><span class="steptech">ByteTrack<br />tuned for 5 fps</span></div>
+    <div class="step"><span class="stepname">Team split</span><span class="steptech">k-means<br />on shirt colour</span></div>
+    <div class="step"><span class="stepname">Map</span><span class="steptech">homography<br />camera-relative</span></div>
+    <div class="step"><span class="stepname">Metrics</span><span class="steptech">shape, spacing<br />overloads, events</span></div>
+    <div class="step"><span class="stepname">Read-out</span><span class="steptech">Claude API<br />rule-based fallback</span></div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px;">
+    <div style="display: flex; flex-direction: column; gap: 8px; border-top: 2px solid oklch(0.640 0.112 148); padding-top: 16px;">
+      <span style="font-size: 15px; font-weight: 600;">Backend</span>
+      <span style="font-size: 14.5px; line-height: 1.65; color: oklch(0.762 0.014 135);">
+        FastAPI &middot; Python 3.12 &middot; SQLAlchemy + SQLite &middot; Ultralytics
+        &middot; OpenCV &middot; scikit-learn &middot; ffmpeg
+      </span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px; border-top: 2px solid oklch(0.688 0.140 252); padding-top: 16px;">
+      <span style="font-size: 15px; font-weight: 600;">Frontend</span>
+      <span style="font-size: 14.5px; line-height: 1.65; color: oklch(0.762 0.014 135);">
+        Next.js 16 &middot; React 19 &middot; Tailwind v4 &middot; SVG pitch view
+        driven off the video clock &middot; Plotly
+      </span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px; border-top: 2px solid oklch(0.720 0.140 45); padding-top: 16px;">
+      <span style="font-size: 15px; font-weight: 600;">Processing model</span>
+      <span style="font-size: 14.5px; line-height: 1.65; color: oklch(0.762 0.014 135);">
+        Batch, not live. Coach picks a window; a two-minute passage
+        is 600 sampled frames in ~60 s on CPU.
+      </span>
+    </div>
+  </div>
+
+  </div>
+
+</div>
+</section>
+<section class="slide" data-label="Measured results" aria-label="Slide 4: Measured results">
+<div style="width: 1280px; height: 720px; background: oklch(0.178 0.012 150); color: oklch(0.955 0.010 130); display: flex; flex-direction: column; gap: 28px; padding: 60px 64px; box-sizing: border-box;">
+
+  <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 40px;">
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: oklch(0.712 0.126 148);">The experimentation loop</span>
+      <h2 style="margin: 0; font-size: 44px; font-weight: 600; letter-spacing: -0.028em;">Every number here was measured</h2>
+    </div>
+    <span style="font-size: 14px; color: oklch(0.618 0.016 140); font-family: 'IBM Plex Mono', ui-monospace, monospace; white-space: nowrap; padding-bottom: 6px;">
+      same 2-minute passage, before &rarr; after
+    </span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px;">
+    <div class="stat">
+      <span class="statlabel">Players detected per frame</span>
+      <span class="statnums"><span class="from">6.0</span><span class="to">12.3</span></span>
+      <span class="note">Root cause: a player is ~30&nbsp;px tall at 640. Upscaling inference to 1280 was the lever, not the model.</span>
+    </div>
+    <div class="stat">
+      <span class="statlabel">Track identities for ~22 players</span>
+      <span class="statnums"><span class="from">374</span><span class="to">180</span></span>
+      <span class="note">ByteTrack&rsquo;s defaults assume 30&nbsp;fps. We sample at 5. Retuned on a 150-frame sweep.</span>
+    </div>
+    <div class="stat">
+      <span class="statlabel">Ball detections in the window</span>
+      <span class="statnums"><span class="from">0</span><span class="to">57</span></span>
+      <span class="note">Upscaling lifted the ball over the detector&rsquo;s floor, which turned possession into a real estimate.</span>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 20px; align-items: stretch; flex-grow: 1;">
+    <div style="display: flex; flex-direction: column; justify-content: center; gap: 14px; background: oklch(0.216 0.014 150); border: 1px solid oklch(0.312 0.018 150); border-radius: 14px; padding: 24px 28px; flex-grow: 1;">
+      <span style="font-size: 13.5px; font-weight: 500; color: oklch(0.762 0.014 135);">Median track lifetime</span>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 20px;">
+        <span style="color: oklch(0.618 0.016 140);">5 frames</span>
+        <span style="color: oklch(0.618 0.016 140); margin: 0 10px;">&rarr;</span>
+        <span style="color: oklch(0.712 0.126 148); font-size: 26px;">12 frames</span>
+      </span>
+    </div>
+    <div style="display: flex; flex-direction: column; justify-content: center; gap: 10px; background: oklch(0.268 0.032 148); border: 1px solid oklch(0.386 0.068 148); border-radius: 14px; padding: 24px 28px; flex: 2 1 0;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: oklch(0.712 0.126 148);">The counter-intuitive one</span>
+      <p style="margin: 0; font-size: 16.5px; line-height: 1.55; color: oklch(0.955 0.010 130); text-wrap: pretty;">
+        ByteTrack&rsquo;s <code style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 15px; color: oklch(0.830 0.118 148);">fuse_score</code>
+        had to be turned <strong style="font-weight: 600;">off</strong>. Folding confidence into the match
+        cost penalises exactly the weak-but-real detections that matter at this
+        resolution &mdash; it was costing a third of all tracked detections.
+      </p>
+    </div>
+  </div>
+
+</div>
+</section>
+<section class="slide" data-label="Error analysis" aria-label="Slide 5: Error analysis">
+<div style="width: 1280px; height: 720px; background: oklch(0.178 0.012 150); color: oklch(0.955 0.010 130); display: flex; flex-direction: column; gap: 26px; padding: 56px 64px; box-sizing: border-box;">
+
+  <div style="display: flex; flex-direction: column; gap: 9px;">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: oklch(0.712 0.126 148);">Error analysis</span>
+    <h2 style="margin: 0; font-size: 42px; font-weight: 600; letter-spacing: -0.028em;">Three failures the metrics never showed</h2>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 22px; flex-grow: 1;">
+
+    <div class="find">
+      <span class="findnum">01</span>
+      <div class="findbody">
+        <span class="findtitle">The minute we analysed was the broadcast intro</span>
+        <span class="findtext">
+          A fixed 300-frame budget at 5&nbsp;fps always read the first 60 seconds. On a
+          103-minute upload that is <strong style="color: oklch(0.955 0.010 130); font-weight: 600;">0.88%</strong>
+          of the match &mdash; title cards and a highlight montage. The &ldquo;30 players tracked&rdquo;
+          were people in promo clips.
+        </span>
+      </div>
+    </div>
+
+    <div class="find">
+      <span class="findnum">02</span>
+      <div class="findbody">
+        <span class="findtitle">Our longest-lived player was the scorebug</span>
+        <span class="findtext">
+          197 frames, the most consistent track in the analysis &mdash; against a median of
+          12 for real players. No single signal caught it: a distant player sits just as
+          high in frame, and a keeper stands just as still.
+          <strong style="color: oklch(0.955 0.010 130); font-weight: 600;">Long-lived AND high AND static</strong>
+          isolated exactly one track out of 181.
+        </span>
+      </div>
+    </div>
+
+    <div class="find">
+      <span class="findnum">03</span>
+      <div class="findbody">
+        <span class="findtitle">The pitch is an American football field</span>
+        <span class="findtext">
+          White yard lines dominate every frame and belong to the wrong sport. The soccer
+          lines are painted yellow &mdash; but so are the goalposts, one team&rsquo;s kit,
+          and the broadcast graphics.
+        </span>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="display: flex; gap: 18px; align-items: flex-start; background: oklch(0.216 0.014 150); border: 1px solid oklch(0.396 0.020 150); border-radius: 14px; padding: 22px 26px;">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="oklch(0.780 0.130 68)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;">
+      <path d="M12 4.8 21 20H3Z" /><path d="M12 10.4v3.8" /><path d="M12 17.1h.01" />
+    </svg>
+    <p style="margin: 0; font-size: 16.5px; line-height: 1.55; text-wrap: pretty;">
+      <strong style="font-weight: 600;">So we labelled the metrics camera-relative, not pitch-relative.</strong>
+      <span style="color: oklch(0.762 0.014 135);">
+        We prototyped two pitch-registration approaches and rejected both with
+        measurements &mdash; chained motion compensation drifts ~400&nbsp;px in a 640&nbsp;px
+        frame, and direct-to-reference loses overlap in 8 seconds. We did not ship
+        coordinates we could not defend.
+      </span>
+    </p>
+  </div>
+
+</div>
+</section>
+<section class="slide" data-label="What's next" aria-label="Slide 6: What's next">
+<div style="width: 1280px; height: 720px; background: oklch(0.178 0.012 150); color: oklch(0.955 0.010 130); display: flex; flex-direction: column; gap: 34px; padding: 60px 64px; box-sizing: border-box;">
+
+  <div style="display: flex; flex-direction: column; gap: 9px;">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: oklch(0.712 0.126 148);">Where it goes</span>
+    <h2 style="margin: 0; font-size: 44px; font-weight: 600; letter-spacing: -0.028em;">What we&rsquo;d build next</h2>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px;">
+    <div class="nextitem">
+      <span class="nexttitle">Appearance-based re-ID</span>
+      <span class="nexttext">
+        IoU association is the ceiling we hit. 180 identities for 22 players means
+        embeddings, not geometry &mdash; the exact bullet in the posting.
+      </span>
+    </div>
+    <div class="nextitem">
+      <span class="nexttitle">Pitch registration</span>
+      <span class="nexttext">
+        The yard lines that break line-detection are regularly spaced and numbered.
+        They could give drift-free absolute position instead.
+      </span>
+    </div>
+    <div class="nextitem">
+      <span class="nexttitle">A fixed-camera path</span>
+      <span class="nexttext">
+        Every commercial system requires one. With a static wide camera the homography
+        is a one-time four-corner calibration.
+      </span>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; justify-content: center; gap: 18px; background: oklch(0.268 0.032 148); border: 1px solid oklch(0.386 0.068 148); border-radius: 16px; padding: 34px 38px; flex-grow: 1;">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: oklch(0.712 0.126 148);">What we actually practised</span>
+    <p style="margin: 0; font-size: 27px; line-height: 1.4; font-weight: 500; letter-spacing: -0.02em; text-wrap: pretty; max-width: 940px;">
+      The posting asks for hypotheses, ablations, error analysis and measurable
+      improvements. Every number in this deck came out of that loop &mdash;
+      including the two approaches we threw away.
+    </p>
+  </div>
+
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 32px; border-top: 1px solid oklch(0.312 0.018 150); padding-top: 20px;">
+    <span style="font-size: 15px; color: oklch(0.762 0.014 135);">SoccerVision &mdash; [TEAM NAMES]</span>
+    <span style="font-size: 14px; color: oklch(0.618 0.016 140); font-family: 'IBM Plex Mono', ui-monospace, monospace;">github.com/leofdurante/SoccerVision</span>
+  </div>
+
+</div>
+</section>
+</div>
+<div id="hud">
+  <span><kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate &middot; <kbd>F</kbd> fullscreen</span>
+  <span id="count"></span>
+</div>
+<script>
+  const slides = [...document.querySelectorAll('.slide')];
+  const count = document.getElementById('count');
+  let at = 0;
+
+  function show(next) {
+    at = Math.max(0, Math.min(slides.length - 1, next));
+    slides.forEach((s, i) => s.classList.toggle('current', i === at));
+    count.textContent = `${at + 1} / ${slides.length}`;
+    location.hash = at + 1;
+  }
+
+  // Scale the fixed 1280x720 slide to whatever the window is, without
+  // reflowing anything — the layout is designed at exactly that size.
+  function fit() {
+    const scale = Math.min(innerWidth / 1280, (innerHeight - 34) / 720);
+    slides.forEach(s => s.style.transform = `scale(${scale})`);
+  }
+
+  addEventListener('resize', fit);
+  addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); show(at + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); show(at - 1); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key === 'f' || e.key === 'F') {
+      document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    }
+  });
+  addEventListener('click', e => { if (!e.target.closest('a')) show(at + 1); });
+
+  fit();
+  show(Math.max(0, (parseInt(location.hash.slice(1), 10) || 1) - 1));
+</script>
+</body>
+</html>

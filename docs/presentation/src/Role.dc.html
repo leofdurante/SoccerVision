@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; font-family: Archivo, system-ui, "Helvetica Neue", sans-serif; }
+    a { color: oklch(0.712 0.126 148); } a:hover { color: oklch(0.830 0.118 148); }
+  </style>
+</helmet>
+
+<div style="width: 1280px; height: 720px; background: oklch(0.178 0.012 150); color: oklch(0.955 0.010 130); display: flex; flex-direction: column; gap: 30px; padding: 60px 64px; box-sizing: border-box;">
+
+  <div style="display: flex; flex-direction: column; gap: 10px;">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: oklch(0.712 0.126 148);">The assignment</span>
+    <h2 style="margin: 0; font-size: 44px; font-weight: 600; letter-spacing: -0.028em; line-height: 1.1;">
+      Pick a job. Pick the skill you can&rsquo;t fake. Build it.
+    </h2>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; flex-grow: 1;">
+
+    <div style="display: flex; flex-direction: column; gap: 16px; background: oklch(0.216 0.014 150); border: 1px solid oklch(0.312 0.018 150); border-radius: 14px; padding: 28px;">
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: oklch(0.618 0.016 140);">The posting</span>
+        <span style="font-size: 21px; font-weight: 600;">Sports Computer Vision Engineer</span>
+        <span style="font-size: 15px; color: oklch(0.762 0.014 135);">SumerSports &middot; football intelligence for NFL clubs</span>
+      </div>
+      <p style="margin: 0; font-size: 16.5px; line-height: 1.6; color: oklch(0.762 0.014 135); border-left: 2px solid oklch(0.386 0.068 148); padding-left: 16px; text-wrap: pretty;">
+        &ldquo;Build and train CV models for sports video: player/ball detection,
+        multi-object tracking, pose/keypoints, event recognition,
+        <strong style="color: oklch(0.955 0.010 130); font-weight: 600;">identity association (re-ID)</strong>.&rdquo;
+      </p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 16px; background: oklch(0.268 0.032 148); border: 1px solid oklch(0.386 0.068 148); border-radius: 14px; padding: 28px;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: oklch(0.712 0.126 148);">The skill we chose</span>
+      <span style="font-size: 30px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.15;">Multi-object tracking &amp; identity association</span>
+      <p style="margin: 0; font-size: 16.5px; line-height: 1.6; color: oklch(0.830 0.118 148);">
+        Detecting a player is one model call. Keeping the <em>same</em> player
+        across 600 frames is the actual problem.
+      </p>
+    </div>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 20px; border-top: 1px solid oklch(0.312 0.018 150); padding-top: 22px;">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: oklch(0.618 0.016 140); white-space: nowrap;">Why that one</span>
+    <p style="margin: 0; font-size: 18px; line-height: 1.5; color: oklch(0.955 0.010 130); text-wrap: pretty;">
+      The posting asks for &ldquo;hands-on model development &mdash;
+      <strong style="color: oklch(0.712 0.126 148); font-weight: 600;">not just running existing repos</strong>.&rdquo;
+      You can only answer that with error analysis and numbers.
+    </p>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

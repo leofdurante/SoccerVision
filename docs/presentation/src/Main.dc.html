@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; font-family: Archivo, system-ui, "Helvetica Neue", sans-serif; }
+    a { color: oklch(0.712 0.126 148); } a:hover { color: oklch(0.830 0.118 148); }
+  </style>
+</helmet>
+
+<div style="width: 1280px; height: 720px; background: oklch(0.178 0.012 150); color: oklch(0.955 0.010 130); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; padding: 64px; box-sizing: border-box;">
+
+  <div style="position: absolute; right: -140px; top: -80px; width: 720px; height: 720px; opacity: 0.09; pointer-events: none;">
+    <svg viewBox="0 0 400 400" width="720" height="720" fill="none" stroke="oklch(0.712 0.126 148)" stroke-width="2">
+      <rect x="20" y="60" width="360" height="280" rx="4" />
+      <line x1="200" y1="60" x2="200" y2="340" />
+      <circle cx="200" cy="200" r="58" />
+      <rect x="20" y="128" width="62" height="144" />
+      <rect x="318" y="128" width="62" height="144" />
+    </svg>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 14px; position: relative;">
+    <svg width="38" height="38" viewBox="0 0 32 32" fill="none">
+      <rect width="32" height="32" rx="8.5" fill="oklch(0.508 0.105 148)" />
+      <g stroke="oklch(0.99 0.012 148)" stroke-width="1.6" stroke-linecap="round" fill="none">
+        <path d="M16 5.6v20.8" />
+        <circle cx="16" cy="16" r="5.2" />
+      </g>
+    </svg>
+    <span style="font-size: 19px; font-weight: 600; letter-spacing: -0.02em;">SoccerVision</span>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 26px; position: relative; max-width: 800px;">
+    <h1 style="margin: 0; font-size: 78px; font-weight: 700; line-height: 1.02; letter-spacing: -0.035em;">
+      Match film in.<br />Tactical data out.
+    </h1>
+    <p style="margin: 0; font-size: 22px; line-height: 1.5; color: oklch(0.762 0.014 135); max-width: 620px;">
+      Computer-vision analysis for high-school and club soccer film — detection,
+      tracking, and team shape from a single uploaded video.
+    </p>
+  </div>
+
+  <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; position: relative; border-top: 1px solid oklch(0.312 0.018 150); padding-top: 22px;">
+    <div style="display: flex; flex-direction: column; gap: 7px;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: oklch(0.618 0.016 140);">Built against a real posting</span>
+      <span style="font-size: 19px; font-weight: 500;">SumerSports &mdash; Sports Computer Vision Engineer</span>
+    </div>
+    <span style="font-size: 15px; color: oklch(0.618 0.016 140); font-family: 'IBM Plex Mono', ui-monospace, monospace;">[TEAM NAMES]</span>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

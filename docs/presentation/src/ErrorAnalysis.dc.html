@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; font-family: Archivo, system-ui, "Helvetica Neue", sans-serif; }
+    a { color: oklch(0.712 0.126 148); } a:hover { color: oklch(0.830 0.118 148); }
+    .find { display: flex; gap: 18px; align-items: flex-start; }
+    .findnum { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 15px;
+               color: oklch(0.640 0.112 148); padding-top: 3px; min-width: 26px; }
+    .findbody { display: flex; flex-direction: column; gap: 5px; }
+    .findtitle { font-size: 19px; font-weight: 600; letter-spacing: -0.015em; }
+    .findtext { font-size: 15.5px; line-height: 1.55; color: oklch(0.762 0.014 135); text-wrap: pretty; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; height: 720px; background: oklch(0.178 0.012 150); color: oklch(0.955 0.010 130); display: flex; flex-direction: column; gap: 26px; padding: 56px 64px; box-sizing: border-box;">
+
+  <div style="display: flex; flex-direction: column; gap: 9px;">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: oklch(0.712 0.126 148);">Error analysis</span>
+    <h2 style="margin: 0; font-size: 42px; font-weight: 600; letter-spacing: -0.028em;">Three failures the metrics never showed</h2>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 22px; flex-grow: 1;">
+
+    <div class="find">
+      <span class="findnum">01</span>
+      <div class="findbody">
+        <span class="findtitle">The minute we analysed was the broadcast intro</span>
+        <span class="findtext">
+          A fixed 300-frame budget at 5&nbsp;fps always read the first 60 seconds. On a
+          103-minute upload that is <strong style="color: oklch(0.955 0.010 130); font-weight: 600;">0.88%</strong>
+          of the match &mdash; title cards and a highlight montage. The &ldquo;30 players tracked&rdquo;
+          were people in promo clips.
+        </span>
+      </div>
+    </div>
+
+    <div class="find">
+      <span class="findnum">02</span>
+      <div class="findbody">
+        <span class="findtitle">Our longest-lived player was the scorebug</span>
+        <span class="findtext">
+          197 frames, the most consistent track in the analysis &mdash; against a median of
+          12 for real players. No single signal caught it: a distant player sits just as
+          high in frame, and a keeper stands just as still.
+          <strong style="color: oklch(0.955 0.010 130); font-weight: 600;">Long-lived AND high AND static</strong>
+          isolated exactly one track out of 181.
+        </span>
+      </div>
+    </div>
+
+    <div class="find">
+      <span class="findnum">03</span>
+      <div class="findbody">
+        <span class="findtitle">The pitch is an American football field</span>
+        <span class="findtext">
+          White yard lines dominate every frame and belong to the wrong sport. The soccer
+          lines are painted yellow &mdash; but so are the goalposts, one team&rsquo;s kit,
+          and the broadcast graphics.
+        </span>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="display: flex; gap: 18px; align-items: flex-start; background: oklch(0.216 0.014 150); border: 1px solid oklch(0.396 0.020 150); border-radius: 14px; padding: 22px 26px;">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="oklch(0.780 0.130 68)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;">
+      <path d="M12 4.8 21 20H3Z" /><path d="M12 10.4v3.8" /><path d="M12 17.1h.01" />
+    </svg>
+    <p style="margin: 0; font-size: 16.5px; line-height: 1.55; text-wrap: pretty;">
+      <strong style="font-weight: 600;">So we labelled the metrics camera-relative, not pitch-relative.</strong>
+      <span style="color: oklch(0.762 0.014 135);">
+        We prototyped two pitch-registration approaches and rejected both with
+        measurements &mdash; chained motion compensation drifts ~400&nbsp;px in a 640&nbsp;px
+        frame, and direct-to-reference loses overlap in 8 seconds. We did not ship
+        coordinates we could not defend.
+      </span>
+    </p>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

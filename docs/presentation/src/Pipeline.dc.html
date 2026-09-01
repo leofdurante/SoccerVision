@@ -1,0 +1,70 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; font-family: Archivo, system-ui, "Helvetica Neue", sans-serif; }
+    a { color: oklch(0.712 0.126 148); } a:hover { color: oklch(0.830 0.118 148); }
+    .step { display: flex; flex-direction: column; gap: 8px; background: oklch(0.216 0.014 150);
+            border: 1px solid oklch(0.312 0.018 150); border-radius: 12px; padding: 22px 16px; flex-grow: 1; }
+    .stepname { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+    .steptech { font-size: 13px; line-height: 1.45; color: oklch(0.618 0.016 140);
+                font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; height: 720px; background: oklch(0.178 0.012 150); color: oklch(0.955 0.010 130); display: flex; flex-direction: column; gap: 32px; padding: 60px 64px; box-sizing: border-box;">
+
+  <div style="display: flex; flex-direction: column; gap: 10px;">
+    <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: oklch(0.712 0.126 148);">What we built</span>
+    <h2 style="margin: 0; font-size: 44px; font-weight: 600; letter-spacing: -0.028em;">One upload, seven stages</h2>
+  </div>
+
+  <div style="display: flex; flex-direction: column; justify-content: center; gap: 40px; flex-grow: 1;">
+
+  <div style="display: flex; align-items: stretch; gap: 10px;">
+    <div class="step"><span class="stepname">Sample</span><span class="steptech">OpenCV<br />5 fps, seekable window</span></div>
+    <div class="step"><span class="stepname">Detect</span><span class="steptech">YOLOv8n<br />imgsz 1280, conf .25</span></div>
+    <div class="step"><span class="stepname">Track</span><span class="steptech">ByteTrack<br />tuned for 5 fps</span></div>
+    <div class="step"><span class="stepname">Team split</span><span class="steptech">k-means<br />on shirt colour</span></div>
+    <div class="step"><span class="stepname">Map</span><span class="steptech">homography<br />camera-relative</span></div>
+    <div class="step"><span class="stepname">Metrics</span><span class="steptech">shape, spacing<br />overloads, events</span></div>
+    <div class="step"><span class="stepname">Read-out</span><span class="steptech">Claude API<br />rule-based fallback</span></div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px;">
+    <div style="display: flex; flex-direction: column; gap: 8px; border-top: 2px solid oklch(0.640 0.112 148); padding-top: 16px;">
+      <span style="font-size: 15px; font-weight: 600;">Backend</span>
+      <span style="font-size: 14.5px; line-height: 1.65; color: oklch(0.762 0.014 135);">
+        FastAPI &middot; Python 3.12 &middot; SQLAlchemy + SQLite &middot; Ultralytics
+        &middot; OpenCV &middot; scikit-learn &middot; ffmpeg
+      </span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px; border-top: 2px solid oklch(0.688 0.140 252); padding-top: 16px;">
+      <span style="font-size: 15px; font-weight: 600;">Frontend</span>
+      <span style="font-size: 14.5px; line-height: 1.65; color: oklch(0.762 0.014 135);">
+        Next.js 16 &middot; React 19 &middot; Tailwind v4 &middot; SVG pitch view
+        driven off the video clock &middot; Plotly
+      </span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px; border-top: 2px solid oklch(0.720 0.140 45); padding-top: 16px;">
+      <span style="font-size: 15px; font-weight: 600;">Processing model</span>
+      <span style="font-size: 14.5px; line-height: 1.65; color: oklch(0.762 0.014 135);">
+        Batch, not live. Coach picks a window; a two-minute passage
+        is 600 sampled frames in ~60 s on CPU.
+      </span>
+    </div>
+  </div>
+
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "pages": [
+    { "id": "page-1", "name": "Slides" },
+    { "id": "page-2", "name": "Cheat sheet" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html",          "x": 0,    "y": 0,    "w": 1280, "h": 720, "page": "page-1", "title": "1 — Title" },
+    { "file": "Role.dc.html",          "x": 1400, "y": 0,    "w": 1280, "h": 720, "page": "page-1", "title": "2 — Role & skill" },
+    { "file": "Pipeline.dc.html",      "x": 2800, "y": 0,    "w": 1280, "h": 720, "page": "page-1", "title": "3 — Pipeline" },
+    { "file": "Results.dc.html",       "x": 0,    "y": 880,  "w": 1280, "h": 720, "page": "page-1", "title": "4 — Measured results" },
+    { "file": "ErrorAnalysis.dc.html", "x": 1400, "y": 880,  "w": 1280, "h": 720, "page": "page-1", "title": "5 — Error analysis" },
+    { "file": "Next.dc.html",          "x": 2800, "y": 880,  "w": 1280, "h": 720, "page": "page-1", "title": "6 — What's next" },
+    { "file": "CheatSheet.dc.html",    "x": 0,    "y": 0,    "w": 816,  "h": 1056, "page": "page-2", "title": "Cheat sheet 1 — stack & numbers" },
+    { "file": "CheatSheetQA.dc.html",  "x": 940,  "y": 0,    "w": 816,  "h": 1056, "page": "page-2", "title": "Cheat sheet 2 — questions" }
+  ],
+  "annotations": [
+    { "id": "timing", "x": 0, "y": -150, "w": 500, "text": "Five minutes ≈ 50s per slide.\nSlides 2 and 5 are the ones judges will remember — give them the most air." }
+  ],
+  "launch": { "view": "canvas", "page": "page-1" }
+}
