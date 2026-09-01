@@ -1,69 +1,307 @@
 @import "tailwindcss";
 
-:root {
-  --background: #f4f6f5;
-  --surface: #ffffff;
-  --surface-muted: #eef1f0;
-  --border: #dbe2df;
-  --foreground: #101714;
-  --foreground-muted: #56655e;
-  --pitch: #1e8f5b;
-  --pitch-line: rgba(255, 255, 255, 0.55);
-  --home: #2f7ff2;
-  --away: #f2664d;
-  --accent: #17c07b;
-  --severity-high: #e5484d;
-  --severity-medium: #f5a524;
-  --severity-low: #6b7a72;
-}
+/* ---------------------------------------------------------------------------
+   SoccerVision design tokens
+   Warm-green palette for a coaching tool: grass greens over warm paper
+   neutrals, with cool/warm team colors that stay legible against both.
+   All colors are authored in oklch so tints share chroma and read as one
+   family; hex equivalents live only where a canvas/JS API needs them
+   (see TeamComparisonChart).
+--------------------------------------------------------------------------- */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-surface: var(--surface);
-  --color-surface-muted: var(--surface-muted);
-  --color-border: var(--border);
-  --color-foreground: var(--foreground);
-  --color-foreground-muted: var(--foreground-muted);
-  --color-pitch: var(--pitch);
-  --color-home: var(--home);
-  --color-away: var(--away);
-  --color-accent: var(--accent);
-  --color-severity-high: var(--severity-high);
-  --color-severity-medium: var(--severity-medium);
-  --color-severity-low: var(--severity-low);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root {
+  color-scheme: light;
+
+  /* Warm paper neutrals (hue 110 = the faintest green cast, chroma <= 0.016) */
+  --paper: oklch(0.984 0.007 110);
+  --surface: oklch(1 0 0);
+  --surface-sunk: oklch(0.966 0.010 110);
+  --line: oklch(0.906 0.012 110);
+  --line-soft: oklch(0.944 0.009 110);
+  --line-strong: oklch(0.838 0.016 110);
+
+  /* Ink */
+  --ink: oklch(0.252 0.018 145);
+  --ink-2: oklch(0.468 0.016 145);
+  --ink-3: oklch(0.618 0.014 145);
+
+  /* Grass — the single brand hue */
+  --grass-50: oklch(0.968 0.020 148);
+  --grass-100: oklch(0.932 0.040 148);
+  --grass-200: oklch(0.874 0.062 148);
+  --grass-400: oklch(0.682 0.110 148);
+  --grass-500: oklch(0.598 0.115 148);
+  --grass-600: oklch(0.508 0.105 148);
+  --grass-700: oklch(0.428 0.090 148);
+  --grass-900: oklch(0.278 0.055 148);
+
+  /* Pitch rendering */
+  --pitch: oklch(0.520 0.098 149);
+  --pitch-alt: oklch(0.548 0.100 149);
+  --pitch-line: oklch(1 0 0 / 0.62);
+
+  /* Teams — equal chroma & lightness, hue apart, so neither dominates */
+  --home: oklch(0.520 0.140 252);
+  --home-soft: oklch(0.944 0.030 252);
+  --away: oklch(0.595 0.150 45);
+  --away-soft: oklch(0.950 0.032 45);
+  --neutral-team: oklch(0.620 0.014 145);
+
+  /* Status */
+  --danger: oklch(0.545 0.180 27);
+  --danger-soft: oklch(0.958 0.026 27);
+  --warn: oklch(0.678 0.140 68);
+  --warn-soft: oklch(0.958 0.036 68);
+
+  /* Radii — one scale, used everywhere */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 20px;
+
+  /* Elevation — warm-tinted, low and wide */
+  --shadow-xs: 0 1px 1px oklch(0.28 0.03 145 / 0.05);
+  --shadow-sm: 0 1px 2px oklch(0.28 0.03 145 / 0.06), 0 1px 1px oklch(0.28 0.03 145 / 0.04);
+  --shadow-md: 0 1px 2px oklch(0.28 0.03 145 / 0.05), 0 8px 20px -10px oklch(0.28 0.03 145 / 0.14);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0f0d;
-    --surface: #121917;
-    --surface-muted: #182420;
-    --border: #253430;
-    --foreground: #eef4f1;
-    --foreground-muted: #93a39b;
-    --pitch: #0f5c39;
-    --pitch-line: rgba(255, 255, 255, 0.35);
-    --home: #4f9dff;
-    --away: #ff7a5c;
-    --accent: #2fe39a;
+    color-scheme: dark;
+
+    --paper: oklch(0.178 0.012 150);
+    --surface: oklch(0.216 0.014 150);
+    --surface-sunk: oklch(0.255 0.016 150);
+    --line: oklch(0.312 0.018 150);
+    --line-soft: oklch(0.268 0.016 150);
+    --line-strong: oklch(0.396 0.020 150);
+
+    --ink: oklch(0.955 0.010 130);
+    --ink-2: oklch(0.762 0.014 135);
+    --ink-3: oklch(0.618 0.016 140);
+
+    --grass-50: oklch(0.268 0.032 148);
+    --grass-100: oklch(0.316 0.048 148);
+    --grass-200: oklch(0.386 0.068 148);
+    --grass-400: oklch(0.640 0.112 148);
+    --grass-500: oklch(0.712 0.126 148);
+    --grass-600: oklch(0.772 0.132 148);
+    --grass-700: oklch(0.830 0.118 148);
+    --grass-900: oklch(0.930 0.060 148);
+
+    --pitch: oklch(0.372 0.076 149);
+    --pitch-alt: oklch(0.398 0.078 149);
+    --pitch-line: oklch(1 0 0 / 0.42);
+
+    --home: oklch(0.688 0.140 252);
+    --home-soft: oklch(0.302 0.050 252);
+    --away: oklch(0.720 0.140 45);
+    --away-soft: oklch(0.312 0.052 45);
+    --neutral-team: oklch(0.620 0.016 145);
+
+    --danger: oklch(0.680 0.170 27);
+    --danger-soft: oklch(0.312 0.062 27);
+    --warn: oklch(0.780 0.130 68);
+    --warn-soft: oklch(0.322 0.052 68);
+
+    --shadow-xs: 0 1px 1px oklch(0 0 0 / 0.30);
+    --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.34);
+    --shadow-md: 0 1px 2px oklch(0 0 0 / 0.30), 0 8px 20px -10px oklch(0 0 0 / 0.55);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-sunk: var(--surface-sunk);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-line-strong: var(--line-strong);
+
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+
+  --color-grass-50: var(--grass-50);
+  --color-grass-100: var(--grass-100);
+  --color-grass-200: var(--grass-200);
+  --color-grass-400: var(--grass-400);
+  --color-grass-500: var(--grass-500);
+  --color-grass-600: var(--grass-600);
+  --color-grass-700: var(--grass-700);
+  --color-grass-900: var(--grass-900);
+
+  --color-pitch: var(--pitch);
+  --color-home: var(--home);
+  --color-home-soft: var(--home-soft);
+  --color-away: var(--away);
+  --color-away-soft: var(--away-soft);
+
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+
+  --radius-xs: var(--r-xs);
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --radius-xl: var(--r-xl);
+
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+
+  --font-sans: var(--font-archivo), ui-sans-serif, "Helvetica Neue", Helvetica, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
 }
 
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 0.9rem;
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans), ui-sans-serif, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    letter-spacing: -0.005em;
+  }
+
+  h1, h2, h3, h4 {
+    letter-spacing: -0.021em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Numbers must never jitter as they poll/update. */
+  .tnum, table, output {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--grass-500);
+    outline-offset: 2px;
+    border-radius: var(--r-xs);
+  }
+
+  ::selection {
+    background: var(--grass-200);
+    color: var(--grass-900);
+  }
 }
 
-::selection {
-  background: var(--accent);
-  color: #04140c;
+@layer components {
+  /* --- Surfaces ---------------------------------------------------------- */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-xs);
+  }
+
+  /* --- Section header: a small caps label over a hairline ---------------- */
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: 0.075em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  /* --- Buttons ----------------------------------------------------------- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    padding: 0 1.15rem;
+    border: 1px solid transparent;
+    border-radius: var(--r-md);
+    font-size: 15px;
+    font-weight: 550;
+    letter-spacing: -0.008em;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+  }
+
+  .btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background: var(--grass-600);
+    color: oklch(0.99 0.01 148);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--grass-700);
+  }
+
+  .btn-secondary {
+    background: var(--surface);
+    border-color: var(--line-strong);
+    color: var(--ink);
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--surface-sunk);
+  }
+
+  /* --- Segmented control ------------------------------------------------- */
+  .segment {
+    display: inline-flex;
+    padding: 3px;
+    gap: 2px;
+    background: var(--surface-sunk);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+  }
+
+  .segment-item {
+    min-height: 32px;
+    padding: 0 0.75rem;
+    border-radius: var(--r-sm);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-2);
+    cursor: pointer;
+    transition: background-color 140ms ease, color 140ms ease;
+  }
+
+  .segment-item[aria-pressed="true"] {
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: var(--shadow-xs);
+  }
+}
+
+@keyframes upload-sweep {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(320%); }
+}
+
+@keyframes pulse-ring {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.06); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

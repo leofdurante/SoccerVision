@@ -1,4 +1,7 @@
+"use client";
+
 import type { TacticalEvent } from "@/types/analysis";
+import { PlayIcon } from "@/components/icons";
 
 interface EventTimelineProps {
   events: TacticalEvent[];
@@ -11,42 +14,55 @@ function formatTimestamp(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-const SEVERITY_COLOR: Record<TacticalEvent["severity"], string> = {
-  high: "bg-severity-high",
-  medium: "bg-severity-medium",
-  low: "bg-severity-low",
+const SEVERITY: Record<TacticalEvent["severity"], { dot: string; label: string }> = {
+  high: { dot: "bg-danger", label: "High" },
+  medium: { dot: "bg-warn", label: "Medium" },
+  low: { dot: "bg-ink-3", label: "Low" },
 };
 
 export function EventTimeline({ events, onSeek }: EventTimelineProps) {
-  if (events.length === 0) {
-    return (
-      <div className="card p-5 text-sm text-foreground-muted">
-        No notable tactical events were detected in this video.
-      </div>
-    );
-  }
-
   const sorted = [...events].sort((a, b) => a.timestamp - b.timestamp);
 
   return (
-    <div className="card flex flex-col gap-1 p-5">
-      <h3 className="mb-2 text-sm font-semibold">Event timeline</h3>
-      <div className="flex max-h-72 flex-col overflow-y-auto">
-        {sorted.map((event, i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={() => onSeek(event.timestamp)}
-            className="flex items-center gap-3 rounded-lg px-2 py-2 text-left text-sm transition-colors hover:bg-surface-muted"
-          >
-            <span className="w-12 shrink-0 font-mono text-xs text-foreground-muted">
-              {formatTimestamp(event.timestamp)}
-            </span>
-            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${SEVERITY_COLOR[event.severity]}`} />
-            <span className="flex-1">{event.description}</span>
-          </button>
-        ))}
+    <section className="card flex flex-col p-5">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="eyebrow">Event timeline</h3>
+        {sorted.length > 0 && (
+          <span className="tnum text-[11px] text-ink-3">{sorted.length} moments</span>
+        )}
       </div>
-    </div>
+
+      {sorted.length === 0 ? (
+        <p className="mt-3 border-t border-line-soft pt-4 text-[14px] text-ink-3">
+          No notable tactical events were detected in this video.
+        </p>
+      ) : (
+        <ul className="mt-3 flex max-h-80 flex-col divide-y divide-line-soft overflow-y-auto border-t border-line-soft">
+          {sorted.map((event, i) => (
+            <li key={i}>
+              <button
+                type="button"
+                onClick={() => onSeek(event.timestamp)}
+                className="group flex w-full items-center gap-3 py-2.5 pr-1 text-left transition-colors hover:bg-surface-sunk"
+                title={`Jump to ${formatTimestamp(event.timestamp)}`}
+              >
+                <span className="tnum w-11 shrink-0 font-mono text-[12px] text-ink-3 group-hover:text-grass-600">
+                  {formatTimestamp(event.timestamp)}
+                </span>
+                <span
+                  className={`h-2 w-2 shrink-0 rounded-full ${SEVERITY[event.severity].dot}`}
+                  title={`${SEVERITY[event.severity].label} severity`}
+                />
+                <span className="flex-1 text-[14px] leading-snug">{event.description}</span>
+                <PlayIcon
+                  size={15}
+                  className="shrink-0 text-ink-3 opacity-0 transition-opacity group-hover:opacity-100"
+                />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
