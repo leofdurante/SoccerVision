@@ -85,3 +85,55 @@ def test_negative_start_is_clamped(clip):
 
 def test_window_past_the_end_yields_nothing(clip):
     assert _timestamps(clip, start_seconds=DURATION_SECONDS + 5) == []
+
+
+# --- frame budget --------------------------------------------------------
+#
+# The default cap covers 60 seconds at 5 fps. Applying it to an explicitly
+# requested window truncated that window silently: a 5:00-7:00 request came
+# back as 5:00-6:00 while the dashboard still described it as the passage
+# the coach asked for. An explicit request now wins, up to a real ceiling.
+
+from app.core.config import Settings  # noqa: E402
+from app.models.analysis import Analysis  # noqa: E402
+from app.services.analysis_service import _frame_budget  # noqa: E402
+
+
+def _budget_settings() -> Settings:
+    return Settings(processing_fps=5.0, max_processed_frames=300, max_window_frames=3000)
+
+
+def _analysis(start=None, end=None) -> Analysis:
+    return Analysis(
+        original_filename="clip.mp4",
+        video_path="/tmp/clip.mp4",
+        analysis_start_seconds=start,
+        analysis_end_seconds=end,
+    )
+
+
+def test_no_window_uses_the_default_cap():
+    assert _frame_budget(_analysis(), _budget_settings()) == 300
+
+
+def test_an_explicit_window_is_not_cut_back_to_the_default_cap():
+    """The regression: 120 seconds at 5 fps needs ~600 frames, not 300."""
+    budget = _frame_budget(_analysis(300.0, 420.0), _budget_settings())
+    assert budget > 300
+    assert budget == pytest.approx(601, abs=1)
+
+
+def test_a_window_inside_the_default_cap_is_still_covered():
+    assert _frame_budget(_analysis(300.0, 360.0), _budget_settings()) == pytest.approx(301, abs=1)
+
+
+def test_an_oversized_window_is_clamped_to_the_ceiling():
+    assert _frame_budget(_analysis(0.0, 1800.0), _budget_settings()) == 3000
+
+
+def test_an_open_ended_window_gets_the_ceiling_not_the_default():
+    assert _frame_budget(_analysis(600.0, None), _budget_settings()) == 3000
+
+
+def test_a_zero_length_window_does_not_go_negative():
+    assert _frame_budget(_analysis(300.0, 300.0), _budget_settings()) >= 0

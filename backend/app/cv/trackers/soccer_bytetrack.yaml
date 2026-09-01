@@ -1,0 +1,39 @@
+# ByteTrack tuned for 5 fps sampling of a panning single-camera match.
+#
+# Ultralytics' defaults assume ~30 fps broadcast. At 5 fps a player is
+# detected intermittently and each miss spawns a fresh identity, so a
+# 30-second passage produced 106 ids for ~22 players. Measured on real
+# footage from this project (150 frames, 30s of wide play):
+#
+#   defaults                              106 ids /  659 detections
+#   match_thresh .9                        85 ids /  804
+#   + fuse_score off                      120 ids / 1169
+#   + new_track_thresh .6, buffer 60       60 ids /  765
+#   match_thresh .95 (this file)           55 ids /  801
+#
+# Half the identities of the default config, with 22% more detections
+# tracked — better on both axes rather than a trade.
+tracker_type: bytetrack
+
+# Detections below this never start or extend a track.
+track_high_thresh: 0.25
+track_low_thresh: 0.1
+
+# Raised from 0.25. A weak detection that fails to associate now has to be
+# genuinely confident before it is allowed to become a new player, which is
+# what stopped the flicker-driven id explosion.
+new_track_thresh: 0.6
+
+# Frames a lost track survives before deletion. At 5 fps this is 12 seconds,
+# so a player briefly missed or occluded keeps their identity.
+track_buffer: 60
+
+# Very permissive association. Inter-frame displacement is small (~8% of a
+# box height) but detections are noisy, so the cost of a missed match is
+# much higher here than the cost of a loose one.
+match_thresh: 0.95
+
+# Off. Fusing detection confidence into the match cost penalises exactly the
+# weak-but-real detections that matter at this resolution — enabling it cost
+# roughly a third of all tracked detections.
+fuse_score: false

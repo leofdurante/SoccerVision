@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import logging
 import time
+import math
 from collections import defaultdict
 from pathlib import Path
 
@@ -51,6 +52,68 @@ def _update(db: Session, analysis: Analysis, **fields) -> None:
     db.refresh(analysis)
 
 
+# A broadcast overlay sits still near the top of frame for the whole match, so
+# the person detector finds it every frame and the tracker rewards it with the
+# longest, most consistent "player" track in the analysis. Real players move.
+# No single one of these signals separates it — a distant player can sit high
+# in frame, and a goalkeeper can stand still — but the combination does.
+GRAPHIC_MIN_SAMPLES = 50
+GRAPHIC_MAX_FEET_FRACTION = 0.25
+GRAPHIC_MAX_SPREAD_PX = 120.0
+
+
+def _drop_static_overlay_tracks(
+    trajectories: dict[int, list[dict]], frame_height: int
+) -> list[int]:
+    """Remove tracks that behave like on-screen graphics, not players.
+
+    Returns the ids removed, so the caller can log what went.
+    """
+    if frame_height <= 0:
+        return []
+
+    removed: list[int] = []
+    for track_id, frames in list(trajectories.items()):
+        if len(frames) < GRAPHIC_MIN_SAMPLES:
+            continue
+
+        mean_feet = sum(f["bbox"][3] for f in frames) / len(frames)
+        if mean_feet / frame_height >= GRAPHIC_MAX_FEET_FRACTION:
+            continue
+
+        xs = [f["center"][0] for f in frames]
+        ys = [f["center"][1] for f in frames]
+        spread = math.hypot(max(xs) - min(xs), max(ys) - min(ys))
+        if spread >= GRAPHIC_MAX_SPREAD_PX:
+            continue
+
+        del trajectories[track_id]
+        removed.append(track_id)
+
+    return removed
+
+
+def _frame_budget(analysis: Analysis, settings: Settings) -> int:
+    """How many sampled frames this analysis is allowed to process.
+
+    With no window, the default cap applies. With an explicit window, the
+    request wins up to `max_window_frames` — so naming a passage actually
+    gets you that passage instead of its first 60 seconds.
+    """
+    start = analysis.analysis_start_seconds
+    end = analysis.analysis_end_seconds
+    if start is None and end is None:
+        return settings.max_processed_frames
+
+    if end is None:
+        # Open-ended from an offset: keep the larger ceiling, not the default.
+        return settings.max_window_frames
+
+    span_seconds = max(0.0, end - (start or 0.0))
+    needed = int(span_seconds * settings.processing_fps) + 1
+    return min(needed, settings.max_window_frames)
+
+
 def run_analysis(analysis_id: str, db: Session, settings: Settings) -> None:
     analysis = db.get(Analysis, analysis_id)
     if analysis is None:
@@ -77,7 +140,12 @@ def run_analysis(analysis_id: str, db: Session, settings: Settings) -> None:
 
         # --- detecting_players / tracking_players -------------------------
         _update(db, analysis, stage="detecting_players", progress=10)
-        tracker: Tracker = build_tracker(settings.model_path, settings.confidence_threshold)
+        tracker: Tracker = build_tracker(
+            settings.model_path,
+            settings.confidence_threshold,
+            settings.detection_imgsz,
+            settings.filter_to_playing_surface,
+        )
         tracker.reset()
 
         field_mapper = FieldMapper()
@@ -91,7 +159,11 @@ def run_analysis(analysis_id: str, db: Session, settings: Settings) -> None:
 
         _update(db, analysis, stage="tracking_players", progress=15)
 
-        max_frames = settings.max_processed_frames
+        # A coach who names a window expects that window. The default budget
+        # only covers 60 seconds at 5 fps, so applying it to an explicit
+        # request truncated it silently — a 5:00-7:00 ask returned 5:00-6:00
+        # while the UI still called it "the passage you asked for".
+        max_frames = _frame_budget(analysis, settings)
         processed_count = 0
         for sampled in processor.extract_frames(
             start_seconds=analysis.analysis_start_seconds or 0.0,
@@ -99,7 +171,8 @@ def run_analysis(analysis_id: str, db: Session, settings: Settings) -> None:
         ):
             if processed_count >= max_frames:
                 logger.warning(
-                    "Analysis %s: reached MAX_PROCESSED_FRAMES=%d, truncating remainder of video",
+                    "Analysis %s: hit the frame budget of %d, truncating the "
+                    "remainder of the requested window",
                     analysis_id,
                     max_frames,
                 )
@@ -149,6 +222,24 @@ def run_analysis(analysis_id: str, db: Session, settings: Settings) -> None:
             if processed_count % 10 == 0:
                 progress = 15 + int(25 * processed_count / max_frames)
                 _update(db, analysis, progress=min(40, progress))
+
+        overlay_ids = _drop_static_overlay_tracks(player_trajectory, metadata.height)
+        if overlay_ids:
+            # These also feed the metrics snapshots and the annotated overlay,
+            # so drop them everywhere rather than only from the trajectories.
+            discarded = set(overlay_ids)
+            per_frame_tracks = [
+                (ts, [o for o in objects if o.track_id not in discarded])
+                for ts, objects in per_frame_tracks
+            ]
+            logger.info(
+                "Analysis %s: discarded %d static-overlay track(s) %s — these sit "
+                "still near the top of frame and are almost certainly broadcast "
+                "graphics rather than players",
+                analysis_id,
+                len(overlay_ids),
+                overlay_ids,
+            )
 
         logger.info(
             "Analysis %s: tracked %d unique players, %d ball detections across %d frames",
