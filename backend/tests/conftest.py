@@ -22,3 +22,4 @@ os.environ["AI_API_KEY"] = ""  # force the deterministic rule-based insight fall
 os.environ["MODEL_PATH"] = "yolov8n.pt"  # keep the integration test on the small weights
 os.environ["CONFIDENCE_THRESHOLD"] = "0.25"
 os.environ["PROCESSING_FPS"] = "5"
+os.environ["DETECTION_IMGSZ"] = "640"

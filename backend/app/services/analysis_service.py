@@ -204,13 +204,12 @@ def run_analysis(analysis_id: str, db: Session, settings: Settings) -> None:
         player_trajectory: dict[int, list[dict]] = defaultdict(list)
         ball_trajectory: list[dict] = []
         track_crops: dict[int, list[np.ndarray]] = defaultdict(list)
-        annotated_frames: list[np.ndarray] = []
-        per_frame_tracks: list[tuple[float, list[dict]]] = []
+        per_frame_tracks: list[tuple[float, list]] = []
 
         _update(db, analysis, stage="tracking_players", progress=15)
 
         # A coach who names a window expects that window. The default budget
-        # only covers 60 seconds at 8 fps, so applying it to an explicit
+        # only covers 60 seconds at 5 fps, so applying it to an explicit
         # request truncated it silently — a 5:00-7:00 ask returned 5:00-6:00
         # while the UI still called it "the passage you asked for".
         max_frames = _frame_budget(analysis, settings)
@@ -283,7 +282,6 @@ def run_analysis(analysis_id: str, db: Session, settings: Settings) -> None:
                     kept_objects.append(obj)
 
             per_frame_tracks.append((sampled.timestamp, kept_objects))
-            annotated_frames.append(sampled.image)  # team labels drawn in a second pass, once known
             processed_count += 1
 
             if processed_count % 10 == 0:
@@ -392,14 +390,29 @@ def run_analysis(analysis_id: str, db: Session, settings: Settings) -> None:
         insights = generator.generate(structured_stats)
 
         # --- annotated output video -----------------------------------------------
+        # Re-read sampled frames and draw as we write. Holding the 1080p
+        # tracking pass in RAM (several GB) is what made a 90s clip look hung
+        # after YOLO finished.
         annotated_path = None
-        if annotated_frames:
+        if per_frame_tracks:
             try:
-                drawn = _draw_annotations(annotated_frames, per_frame_tracks, team_by_track)
                 from app.services.storage import annotated_video_path
 
                 out_path = annotated_video_path(analysis_id)
-                processor.create_output_video(out_path, drawn, fps=settings.processing_fps)
+
+                def _annotated_frames():
+                    for sampled, (_, objects) in zip(
+                        processor.extract_frames(
+                            start_seconds=analysis.analysis_start_seconds or 0.0,
+                            end_seconds=analysis.analysis_end_seconds,
+                        ),
+                        per_frame_tracks,
+                    ):
+                        yield _annotate_frame(sampled.image, objects, team_by_track)
+
+                processor.write_frame_stream(
+                    out_path, _annotated_frames(), fps=settings.processing_fps
+                )
                 annotated_path = str(out_path)
             except Exception:
                 logger.exception("Analysis %s: failed to write annotated video (non-fatal)", analysis_id)
@@ -545,24 +558,21 @@ def _compute_metrics_and_events(snapshots: list[tuple[float, dict]]):
     return team_metrics, current_advantages, throttled_events
 
 
-def _draw_annotations(
-    frames: list[np.ndarray],
-    per_frame_tracks: list[tuple[float, list]],
+def _annotate_frame(
+    frame: np.ndarray,
+    tracked_objects: list,
     team_by_track: dict[int, dict],
-) -> list[np.ndarray]:
-    drawn = []
-    for frame, (_, tracked_objects) in zip(frames, per_frame_tracks):
-        canvas = frame.copy()
-        for obj in tracked_objects:
-            x1, y1, x2, y2 = [int(v) for v in obj.bbox]
-            if obj.class_name == "ball":
-                color = (0, 255, 255)
-                label = "ball"
-            else:
-                team = team_by_track.get(obj.track_id, {}).get("team", "unknown")
-                color = TEAM_COLORS_BGR.get(team, TEAM_COLORS_BGR["unknown"])
-                label = f"#{obj.track_id} {team}"
-            cv2.rectangle(canvas, (x1, y1), (x2, y2), color, 2)
-            cv2.putText(canvas, label, (x1, max(0, y1 - 6)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-        drawn.append(canvas)
-    return drawn
+) -> np.ndarray:
+    canvas = frame.copy()
+    for obj in tracked_objects:
+        x1, y1, x2, y2 = [int(v) for v in obj.bbox]
+        if obj.class_name == "ball":
+            color = (0, 255, 255)
+            label = "ball"
+        else:
+            team = team_by_track.get(obj.track_id, {}).get("team", "unknown")
+            color = TEAM_COLORS_BGR.get(team, TEAM_COLORS_BGR["unknown"])
+            label = f"#{obj.track_id} {team}"
+        cv2.rectangle(canvas, (x1, y1), (x2, y2), color, 2)
+        cv2.putText(canvas, label, (x1, max(0, y1 - 6)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+    return canvas

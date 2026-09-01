@@ -1,6 +1,6 @@
 """Player/ball/referee detection.
 
-Wraps Ultralytics YOLOv8 (COCO-pretrained `yolov8s.pt` by default — see
+Wraps Ultralytics YOLOv8 (COCO-pretrained `yolov8n.pt` by default — see
 .env.example for rationale) behind a small `Detector` interface so the
 rest of the app never imports `ultralytics` directly and the model can be
 swapped for a soccer-specific fine-tuned checkpoint later without
@@ -20,6 +20,8 @@ from dataclasses import dataclass
 from typing import Protocol
 
 import numpy as np
+
+from app.cv.runtime import yolo_runtime_kwargs
 
 logger = logging.getLogger("soccervision.cv.detector")
 
@@ -58,7 +60,7 @@ class Detector(Protocol):
 class YoloDetector:
     """Ultralytics YOLOv8-backed implementation of `Detector`."""
 
-    def __init__(self, model_path: str, confidence_threshold: float = 0.45, imgsz: int = 1280):
+    def __init__(self, model_path: str, confidence_threshold: float = 0.45, imgsz: int = 640):
         self.confidence_threshold = confidence_threshold
         self.imgsz = imgsz
         self._model = None
@@ -78,10 +80,9 @@ class YoloDetector:
             frame,
             classes=list(CLASS_MAP.keys()),
             conf=self.confidence_threshold,
-            # Upscale before inference: players are small in wide match shots
-            # and the detector misses most of them at native resolution.
             imgsz=self.imgsz,
             verbose=False,
+            **yolo_runtime_kwargs(),
         )
         detections: list[Detection] = []
         for result in results:
@@ -113,7 +114,7 @@ class NullDetector:
         return []
 
 
-def build_detector(model_path: str, confidence_threshold: float, imgsz: int = 1280) -> Detector:
+def build_detector(model_path: str, confidence_threshold: float, imgsz: int = 640) -> Detector:
     try:
         detector = YoloDetector(model_path, confidence_threshold, imgsz)
         detector._ensure_model()  # fail fast, not on first real frame

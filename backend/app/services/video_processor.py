@@ -13,12 +13,24 @@ import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterator
+from typing import Callable, Iterable, Iterator
 
 import cv2
 import numpy as np
 
 logger = logging.getLogger("soccervision.video_processor")
+
+# Longest edge of the annotated MP4. Drawing happens at source resolution
+# first so boxes stay aligned, then we downscale for a cheaper encode.
+ANNOTATED_MAX_WIDTH = 1280
+
+
+def downscale_for_output(frame: np.ndarray, max_width: int = ANNOTATED_MAX_WIDTH) -> np.ndarray:
+    height, width = frame.shape[:2]
+    if width <= max_width:
+        return frame
+    scale = max_width / width
+    return cv2.resize(frame, (max_width, int(round(height * scale))), interpolation=cv2.INTER_AREA)
 
 
 @dataclass
@@ -150,15 +162,31 @@ class VideoProcessor:
     def create_output_video(
         self,
         output_path: Path,
-        frames: list[np.ndarray],
+        frames: Iterable[np.ndarray],
         fps: float | None = None,
     ) -> Path:
-        """Write an annotated video from a list of BGR frames (as produced
-        during the sampled-frame pass)."""
-        if not frames:
-            raise VideoReadError("No frames to write to output video.")
+        """Write an annotated video from BGR frames, one at a time.
 
-        height, width = frames[0].shape[:2]
+        Frames are not collected into a list first — a 90-second 1080p
+        clip at 5 fps is several gigabytes uncompressed, which is what
+        made analysis appear to hang after tracking finished.
+        """
+        return self.write_frame_stream(output_path, frames, fps=fps)
+
+    def write_frame_stream(
+        self,
+        output_path: Path,
+        frames: Iterable[np.ndarray],
+        fps: float | None = None,
+    ) -> Path:
+        iterator = iter(frames)
+        try:
+            first = next(iterator)
+        except StopIteration as exc:
+            raise VideoReadError("No frames to write to output video.") from exc
+
+        first = downscale_for_output(first)
+        height, width = first.shape[:2]
         output_fps = fps or self.processing_fps or 5.0
 
         # OpenCV can only reliably write MPEG-4 Part 2 ("mp4v"/FMP4) here.
@@ -168,9 +196,12 @@ class VideoProcessor:
         scratch = output_path.with_name(f"{output_path.stem}__raw.mp4")
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         writer = cv2.VideoWriter(str(scratch), fourcc, output_fps, (width, height))
+        if not writer.isOpened():
+            raise VideoReadError(f"Could not open video writer for {scratch}")
         try:
-            for frame in frames:
-                writer.write(frame)
+            writer.write(first)
+            for frame in iterator:
+                writer.write(downscale_for_output(frame))
         finally:
             writer.release()
 

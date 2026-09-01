@@ -1,4 +1,4 @@
-# ByteTrack tuned for 8 fps sampling of a panning single-camera match.
+# ByteTrack tuned for 5 fps sampling of a panning single-camera match.
 #
 # Ultralytics' defaults assume ~30 fps broadcast. At low sample rates a
 # player is detected intermittently and each miss spawns a fresh identity,
@@ -25,9 +25,9 @@ track_low_thresh: 0.1
 # player, which is what stopped the flicker-driven id explosion.
 new_track_thresh: 0.7
 
-# Frames a lost track survives before deletion. At 8 fps this is 10 seconds,
+# Frames a lost track survives before deletion. At 5 fps this is 12 seconds,
 # so a player briefly missed or occluded keeps their identity.
-track_buffer: 80
+track_buffer: 60
 
 # Very permissive association. Inter-frame displacement is small (~8% of a
 # box height) but detections are noisy, so the cost of a missed match is

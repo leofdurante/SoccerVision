@@ -2,7 +2,7 @@
 
 Uses Ultralytics' ByteTrack implementation with a tuned config
 (`trackers/soccer_bytetrack.yaml`) — the shipped defaults assume ~30 fps
-broadcast and churn identities badly at the 8 fps this project samples at.
+broadcast and churn identities badly at the 5 fps this project samples at.
 Detection and tracking share one underlying YOLO model instance (tracking
 calls `model.track(..., persist=True)` on the same weights the `Detector`
 uses) so we don't pay to load the model twice, while still exposing
@@ -20,10 +20,11 @@ import cv2
 import numpy as np
 
 from app.cv.detector import CLASS_MAP
+from app.cv.runtime import yolo_runtime_kwargs
 
 logger = logging.getLogger("soccervision.cv.tracker")
 
-# Tuned for 8 fps sampling of a panning camera; see the file's own header for
+# Tuned for 5 fps sampling of a panning camera; see the file's own header for
 # the measurements behind each value.
 _TRACKER_CONFIG = Path(__file__).parent / "trackers" / "soccer_bytetrack.yaml"
 
@@ -88,7 +89,7 @@ class ByteTrackTracker:
         self,
         model_path: str,
         confidence_threshold: float = 0.45,
-        imgsz: int = 1280,
+        imgsz: int = 640,
         filter_to_playing_surface: bool = True,
     ):
         self.confidence_threshold = confidence_threshold
@@ -111,13 +112,11 @@ class ByteTrackTracker:
             frame,
             classes=list(CLASS_MAP.keys()),
             conf=self.confidence_threshold,
-            # Upscale before inference. In a wide match shot a player is only
-            # ~30px tall at 640, which is near what yolov8n can resolve; this
-            # roughly doubles how many are found per frame.
             imgsz=self.imgsz,
             tracker=str(_TRACKER_CONFIG),
             persist=True,
             verbose=False,
+            **yolo_runtime_kwargs(),
         )
         surface = (
             _playing_surface_mask(frame) if self.filter_to_playing_surface else None
@@ -155,9 +154,25 @@ class ByteTrackTracker:
         return tracked
 
     def reset(self) -> None:
-        """Drop the loaded model so the next `update()` starts a fresh
-        ByteTrack state (new video / new analysis job)."""
-        self._model = None
+        """Clear ByteTrack identities for a new job without unloading weights.
+
+        Dropping `self._model` forced a second YOLO load on every analysis
+        (~seconds, plus GPU/CPU memory churn). The predictor's trackers and
+        `vid_path` are what `persist=True` keys off — reset those instead.
+        """
+        if self._model is None:
+            return
+        predictor = getattr(self._model, "predictor", None)
+        if predictor is None:
+            return
+        for tracker in getattr(predictor, "trackers", None) or []:
+            reset_fn = getattr(tracker, "reset", None)
+            if callable(reset_fn):
+                reset_fn()
+        if hasattr(predictor, "trackers"):
+            predictor.trackers = []
+        if hasattr(predictor, "vid_path"):
+            predictor.vid_path = []
 
 
 class NullTracker:
@@ -171,7 +186,7 @@ class NullTracker:
 def build_tracker(
     model_path: str,
     confidence_threshold: float,
-    imgsz: int = 1280,
+    imgsz: int = 640,
     filter_to_playing_surface: bool = True,
 ) -> Tracker:
     try:
