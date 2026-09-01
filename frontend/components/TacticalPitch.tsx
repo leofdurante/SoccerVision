@@ -34,6 +34,12 @@ const TEAM_COLOR: Record<Team, string> = {
   unknown: "var(--neutral-team)",
 };
 
+function formatClock(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const sec = Math.floor(seconds % 60);
+  return `${m}:${sec.toString().padStart(2, "0")}`;
+}
+
 function nearestFrame<T extends { timestamp: number }>(frames: T[], t: number): T | null {
   let best: T | null = null;
   let bestDiff = Infinity;
@@ -76,6 +82,25 @@ export function TacticalPitch({ players, ball, currentTime, showTrails = true }:
   }, [byTrack, currentTime, showTrails]);
 
   const currentBall = useMemo(() => nearestFrame(ball, currentTime), [ball, currentTime]);
+
+  // The backend analyses only a bounded window of long uploads, so the
+  // playhead is routinely outside the tracked range. Say so rather than
+  // painting an empty pitch that reads as a broken feature.
+  const covered = useMemo(() => {
+    let min = Infinity;
+    let max = -Infinity;
+    for (const frame of players) {
+      if (frame.timestamp < min) min = frame.timestamp;
+      if (frame.timestamp > max) max = frame.timestamp;
+    }
+    return Number.isFinite(min) ? { start: min, end: max } : null;
+  }, [players]);
+
+  const outOfRange =
+    covered !== null &&
+    currentPlayers.length === 0 &&
+    (currentTime < covered.start - MAX_FRAME_GAP_SECONDS ||
+      currentTime > covered.end + MAX_FRAME_GAP_SECONDS);
 
   return (
     <svg
@@ -159,6 +184,35 @@ export function TacticalPitch({ players, ball, currentTime, showTrails = true }:
         <g transform={`translate(${currentBall.field_x}, ${currentBall.field_y * Y_SCALE})`}>
           <circle r={2.0} fill="#000" fillOpacity={0.18} />
           <circle r={1.15} fill="#ffffff" stroke="#12211a" strokeWidth={0.28} />
+        </g>
+      )}
+
+      {/* Out-of-range notice */}
+      {outOfRange && (
+        <g>
+          <rect x={0} y={0} width={100} height={H} rx={1} fill="#04140c" fillOpacity={0.62} />
+          <text
+            x={50}
+            y={H / 2 - 2.6}
+            textAnchor="middle"
+            fontSize={3.6}
+            fontWeight={600}
+            fill="#ffffff"
+            className="select-none"
+          >
+            No tracking data here
+          </text>
+          <text
+            x={50}
+            y={H / 2 + 3.4}
+            textAnchor="middle"
+            fontSize={2.9}
+            fill="#ffffff"
+            fillOpacity={0.78}
+            className="select-none"
+          >
+            {`Analysis covers ${formatClock(covered.start)}\u2013${formatClock(covered.end)}`}
+          </text>
         </g>
       )}
 
