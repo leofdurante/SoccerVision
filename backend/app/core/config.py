@@ -32,12 +32,30 @@ class Settings(BaseSettings):
     # --- Computer vision ---
     model_path: str = "yolov8n.pt"
     processing_fps: float = 5.0
-    confidence_threshold: float = 0.4
+    confidence_threshold: float = 0.25
 
-    # Hackathon-scale safety cap: max sampled frames actually processed
-    # per video, to keep demo processing time and memory bounded
-    # regardless of how long the uploaded match video is.
+    # Inference resolution. Source footage is often 640x360, where a player
+    # stands ~30px tall — near the floor of what yolov8n resolves. Upscaling
+    # before inference roughly doubles the players found per frame, at about
+    # 3x the inference time. Measured on real match footage:
+    #   640/0.40 -> 6.0 players/frame   1280/0.40 -> 8.5
+    #   640/0.25 -> 8.2                 1280/0.25 -> 12.3
+    detection_imgsz: int = 1280
+
+    # Reject detections whose feet are not on the playing surface. A stadium
+    # shot contains substitutes, coaches, officials and spectators, plus the
+    # broadcast scorebug, all of which the person detector happily returns.
+    filter_to_playing_surface: bool = True
+
+    # Safety cap for an upload with no explicit window: bounds processing
+    # time and memory regardless of how long the video is. At 5 fps this is
+    # 60 seconds of footage.
     max_processed_frames: int = 300
+
+    # When a coach names a window, that request is honoured up to this
+    # larger ceiling rather than being silently cut back to the default
+    # budget. At 5 fps this is 10 minutes of footage.
+    max_window_frames: int = 3000
 
     # --- AI tactical analyst ---
     ai_api_key: str = ""

@@ -58,8 +58,9 @@ class Detector(Protocol):
 class YoloDetector:
     """Ultralytics YOLOv8-backed implementation of `Detector`."""
 
-    def __init__(self, model_path: str, confidence_threshold: float = 0.4):
+    def __init__(self, model_path: str, confidence_threshold: float = 0.25, imgsz: int = 1280):
         self.confidence_threshold = confidence_threshold
+        self.imgsz = imgsz
         self._model = None
         self._model_path = model_path
 
@@ -77,6 +78,9 @@ class YoloDetector:
             frame,
             classes=list(CLASS_MAP.keys()),
             conf=self.confidence_threshold,
+            # Upscale before inference: players are small in wide match shots
+            # and the detector misses most of them at native resolution.
+            imgsz=self.imgsz,
             verbose=False,
         )
         detections: list[Detection] = []
@@ -109,9 +113,9 @@ class NullDetector:
         return []
 
 
-def build_detector(model_path: str, confidence_threshold: float) -> Detector:
+def build_detector(model_path: str, confidence_threshold: float, imgsz: int = 1280) -> Detector:
     try:
-        detector = YoloDetector(model_path, confidence_threshold)
+        detector = YoloDetector(model_path, confidence_threshold, imgsz)
         detector._ensure_model()  # fail fast, not on first real frame
         return detector
     except Exception:

@@ -4,44 +4,83 @@ import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { apiUrl } from "@/lib/api";
 
 export interface VideoPanelHandle {
+  /** Seek to an absolute timestamp in the source video's own timeline. */
   seekTo: (seconds: number) => void;
 }
 
 interface VideoPanelProps {
   videoUrl: string;
   annotatedVideoUrl: string | null;
+  /** Always receives an ABSOLUTE timestamp, whichever source is playing. */
   onTimeUpdate: (seconds: number) => void;
-  /** Jump here once the video is ready — the analysed window rarely starts at 0. */
-  startAtSeconds?: number;
+  /**
+   * Absolute offset of the analysed window. The annotated clip contains only
+   * the analysed frames, so its own clock starts at 0 while the tracking data
+   * is stamped in the original video's timeline — everything downstream keys
+   * off absolute time, so the two have to be reconciled here.
+   */
+  analysisStartSeconds?: number;
 }
 
 export const VideoPanel = forwardRef<VideoPanelHandle, VideoPanelProps>(function VideoPanel(
-  { videoUrl, annotatedVideoUrl, onTimeUpdate, startAtSeconds },
+  { videoUrl, annotatedVideoUrl, onTimeUpdate, analysisStartSeconds = 0 },
   ref
 ) {
   const videoElRef = useRef<HTMLVideoElement>(null);
   const [showAnnotated, setShowAnnotated] = useState(Boolean(annotatedVideoUrl));
 
-  useImperativeHandle(ref, () => ({
-    seekTo(seconds: number) {
-      if (videoElRef.current) {
-        videoElRef.current.currentTime = seconds;
-      }
-    },
-  }));
+  const usingAnnotated = showAnnotated && Boolean(annotatedVideoUrl);
+  // The annotated clip's t=0 is the start of the analysed window.
+  const offset = usingAnnotated ? analysisStartSeconds : 0;
 
-  const src = showAnnotated && annotatedVideoUrl ? annotatedVideoUrl : videoUrl;
+  const toAbsolute = (elapsed: number) => elapsed + offset;
+  const toElapsed = (absolute: number) => absolute - offset;
 
-  // Landing at 0:00 on a video whose analysed window starts ten minutes in
-  // shows an empty pitch and reads as a broken feature. Open on the window.
+  useImperativeHandle(
+    ref,
+    () => ({
+      seekTo(seconds: number) {
+        const el = videoElRef.current;
+        if (!el) return;
+        const target = toElapsed(seconds);
+        if (!Number.isFinite(target) || target < 0) return;
+        el.currentTime = target;
+        onTimeUpdate(seconds);
+      },
+    }),
+    // Rebuild when the offset changes so a seek after toggling source lands right.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [offset, onTimeUpdate]
+  );
+
+  const src = usingAnnotated && annotatedVideoUrl ? annotatedVideoUrl : videoUrl;
+
+  // Only the original needs seeking — the annotated clip already begins at the
+  // window. Landing at 0:00 on a 103-minute original whose analysis starts ten
+  // minutes in shows an empty pitch and reads as a broken feature.
   const seekedFor = useRef<string | null>(null);
   const onLoadedMetadata = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     const el = e.currentTarget;
-    if (startAtSeconds === undefined || seekedFor.current === src) return;
-    if (!Number.isFinite(el.duration) || startAtSeconds >= el.duration) return;
+    if (seekedFor.current === src) return;
     seekedFor.current = src;
-    el.currentTime = startAtSeconds;
-    onTimeUpdate(startAtSeconds);
+
+    if (usingAnnotated) {
+      onTimeUpdate(toAbsolute(el.currentTime));
+      return;
+    }
+    if (analysisStartSeconds > 0 && Number.isFinite(el.duration) && analysisStartSeconds < el.duration) {
+      el.currentTime = analysisStartSeconds;
+    }
+    onTimeUpdate(el.currentTime);
+  };
+
+  const switchSource = (next: boolean) => {
+    // Carry the viewing position across the toggle instead of jumping.
+    const el = videoElRef.current;
+    const absolute = el ? toAbsolute(el.currentTime) : analysisStartSeconds;
+    setShowAnnotated(next);
+    seekedFor.current = null;
+    onTimeUpdate(absolute);
   };
 
   return (
@@ -53,7 +92,7 @@ export const VideoPanel = forwardRef<VideoPanelHandle, VideoPanelProps>(function
         controls
         className="aspect-video w-full rounded-lg border border-line bg-black shadow-sm"
         onLoadedMetadata={onLoadedMetadata}
-        onTimeUpdate={(e) => onTimeUpdate(e.currentTarget.currentTime)}
+        onTimeUpdate={(e) => onTimeUpdate(toAbsolute(e.currentTarget.currentTime))}
       />
 
       {annotatedVideoUrl && (
@@ -62,7 +101,7 @@ export const VideoPanel = forwardRef<VideoPanelHandle, VideoPanelProps>(function
             <button
               type="button"
               aria-pressed={!showAnnotated}
-              onClick={() => setShowAnnotated(false)}
+              onClick={() => switchSource(false)}
               className="segment-item"
             >
               Original
@@ -70,14 +109,14 @@ export const VideoPanel = forwardRef<VideoPanelHandle, VideoPanelProps>(function
             <button
               type="button"
               aria-pressed={showAnnotated}
-              onClick={() => setShowAnnotated(true)}
+              onClick={() => switchSource(true)}
               className="segment-item"
             >
               With tracking
             </button>
           </div>
           <span className="hidden text-[12px] text-ink-3 sm:block">
-            Boxes and IDs drawn by the detector
+            {usingAnnotated ? "Analyzed window only, at sampling rate" : "Full original video"}
           </span>
         </div>
       )}

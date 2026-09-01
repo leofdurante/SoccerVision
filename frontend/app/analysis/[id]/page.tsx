@@ -44,6 +44,7 @@ export default function AnalysisPage({ params }: { params: Promise<{ id: string 
     analysis?.analysis_window?.requested_start_seconds != null ||
     analysis?.analysis_window?.requested_end_seconds != null;
 
+
   // The backend caps how much of a long upload it analyses, so the dashboard
   // can describe a fraction of the match. Work out what was actually covered
   // and say so, rather than letting the metrics read as whole-match figures.
@@ -60,6 +61,13 @@ export default function AnalysisPage({ params }: { params: Promise<{ id: string 
     const duration = meta.duration_seconds;
     return { start, end, duration, partial: duration > 0 && end - start < duration * 0.9 };
   }, [analysis?.players, meta]);
+  // The frame budget can stop short of the window that was asked for. Saying
+  // "the passage you asked to analyze" over a truncated range is worse than
+  // saying nothing, so detect the shortfall and name it.
+  const requestedEnd = analysis?.analysis_window?.requested_end_seconds ?? null;
+  const shortfallSeconds =
+    requestedEnd != null && coverage != null ? requestedEnd - coverage.end : 0;
+  const truncated = shortfallSeconds > 5;
 
   return (
     <>
@@ -113,7 +121,7 @@ export default function AnalysisPage({ params }: { params: Promise<{ id: string 
             </div>
 
             {coverage?.partial &&
-              (requestedWindow ? (
+              (requestedWindow && !truncated ? (
                 <div className="flex items-start gap-2.5 rounded-md border border-line bg-surface-sunk px-4 py-3">
                   <ClockIcon size={17} className="mt-px shrink-0 text-ink-3" />
                   <p className="text-[13px] leading-snug text-ink-2">
@@ -123,6 +131,25 @@ export default function AnalysisPage({ params }: { params: Promise<{ id: string 
                     </span>{" "}
                     &mdash; the passage you asked to analyze. Everything below describes
                     that window.
+                  </p>
+                </div>
+              ) : truncated ? (
+                <div className="flex items-start gap-2.5 rounded-md border border-warn/30 bg-warn-soft px-4 py-3">
+                  <AlertIcon size={17} className="mt-px shrink-0 text-warn" />
+                  <p className="text-[13px] leading-snug text-ink-2">
+                    <span className="font-semibold text-ink">
+                      You asked for {formatClock(coverage.start)}&ndash;
+                      {formatClock(requestedEnd ?? coverage.end)}, but only{" "}
+                      {formatClock(coverage.start)}&ndash;{formatClock(coverage.end)} was
+                      analyzed.
+                    </span>{" "}
+                    The analyzer ran out of its frame budget {formatClock(shortfallSeconds)}{" "}
+                    early. Everything below describes the shorter window &mdash; try a
+                    narrower range, or raise{" "}
+                    <code className="rounded-xs bg-surface px-1 py-px font-mono text-[12px]">
+                      MAX_WINDOW_FRAMES
+                    </code>
+                    .
                   </p>
                 </div>
               ) : (
@@ -155,7 +182,7 @@ export default function AnalysisPage({ params }: { params: Promise<{ id: string 
                     videoUrl={analysis.video_url}
                     annotatedVideoUrl={analysis.annotated_video_url}
                     onTimeUpdate={setCurrentTime}
-                    startAtSeconds={coverage?.start}
+                    analysisStartSeconds={coverage?.start}
                   />
                 </div>
 
