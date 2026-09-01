@@ -144,12 +144,22 @@ class Insight(BaseModel):
     source: Literal["ai_interpretation", "rule_based_fallback"]
 
 
+class AnalysisWindow(BaseModel):
+    """The slice of the upload that was analysed, in seconds from the start
+    of the video. `requested_*` is what the coach asked for; the pipeline may
+    stop earlier if the frame budget runs out first."""
+
+    requested_start_seconds: float | None = None
+    requested_end_seconds: float | None = None
+
+
 class AnalysisFullResponse(BaseModel):
     analysis_id: str
     status: AnalysisStatus
     stage: Stage
     progress: int
     original_filename: str
+    analysis_window: AnalysisWindow | None = None
     video_url: str
     annotated_video_url: str | None = None
     video_metadata: VideoMetadata | None = None

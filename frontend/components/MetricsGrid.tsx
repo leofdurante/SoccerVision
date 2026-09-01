@@ -2,7 +2,14 @@ import type { MetricsResponse, Team, TeamMetrics } from "@/types/analysis";
 
 interface MetricsGridProps {
   metrics: MetricsResponse;
+  /** How many frames the ball was actually detected in. Possession is derived
+   *  from ball position, so a handful of detections makes it meaningless. */
+  ballSampleCount: number;
 }
+
+// Below this many ball detections, a possession split is noise wearing a
+// percentage sign — two detections in a minute can read as "100% / 0%".
+const MIN_BALL_SAMPLES_FOR_POSSESSION = 25;
 
 interface ComparisonRow {
   label: string;
@@ -25,18 +32,14 @@ function TeamLabel({ team, align }: { team: Team; align: "left" | "right" }) {
   );
 }
 
-function FormationTag({ metrics }: { metrics: TeamMetrics }) {
-  if (!metrics.formation) return null;
-  const confidence = Math.round((metrics.formation_confidence ?? 0) * 100);
-  return (
-    <span
-      className="tnum inline-flex items-baseline gap-1.5 rounded-md border border-line bg-surface-sunk px-2 py-1 text-[12px] font-semibold"
-      title="Heuristic estimate from player positions — not a trained classifier"
-    >
-      {metrics.formation}
-      <span className="font-normal text-ink-3">{confidence}% est.</span>
-    </span>
-  );
+/**
+ * Formation estimation reads player positions against pitch thirds and
+ * lanes. Without pitch registration those positions are camera-relative,
+ * so the label would be a guess wearing a confidence score. Withheld
+ * until the mapping is real.
+ */
+function FormationTag() {
+  return null;
 }
 
 /**
@@ -94,7 +97,7 @@ function ThirdsStrip({ team, metrics }: { team: Team; metrics: TeamMetrics }) {
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <TeamLabel team={team} align="left" />
-        <FormationTag metrics={metrics} />
+        <FormationTag />
       </div>
 
       <div className="flex flex-col gap-2 border-t border-line-soft pt-3">
@@ -118,7 +121,7 @@ function ThirdsStrip({ team, metrics }: { team: Team; metrics: TeamMetrics }) {
   );
 }
 
-export function MetricsGrid({ metrics }: MetricsGridProps) {
+export function MetricsGrid({ metrics, ballSampleCount }: MetricsGridProps) {
   const rows: ComparisonRow[] = [
     { label: "Width", home: metrics.home.width, away: metrics.away.width, format: (v) => v.toFixed(1) },
     { label: "Depth", home: metrics.home.depth, away: metrics.away.depth, format: (v) => v.toFixed(1) },
@@ -150,7 +153,7 @@ export function MetricsGrid({ metrics }: MetricsGridProps) {
       <div className="card p-5">
         <div className="flex items-center justify-between">
           <TeamLabel team="home" align="left" />
-          <h3 className="eyebrow">Team shape</h3>
+          <h3 className="eyebrow">Team shape · camera-relative</h3>
           <TeamLabel team="away" align="right" />
         </div>
 
@@ -170,7 +173,19 @@ export function MetricsGrid({ metrics }: MetricsGridProps) {
         </div>
       </div>
 
-      {metrics.possession_estimate && (
+      {metrics.possession_estimate && ballSampleCount < MIN_BALL_SAMPLES_FOR_POSSESSION && (
+        <div className="card flex flex-col gap-1.5 p-5">
+          <h3 className="eyebrow">Possession</h3>
+          <p className="text-[13px] leading-snug text-ink-3">
+            Not enough ball detections to estimate possession &mdash; the ball was
+            found in {ballSampleCount} {ballSampleCount === 1 ? "frame" : "frames"} of
+            this window. At this video resolution it is only a few pixels across, so
+            the detector rarely picks it up.
+          </p>
+        </div>
+      )}
+
+      {metrics.possession_estimate && ballSampleCount >= MIN_BALL_SAMPLES_FOR_POSSESSION && (
         <div className="card flex flex-col gap-2.5 p-5">
           <div className="flex items-baseline justify-between">
             <h3 className="eyebrow">Possession · estimated</h3>

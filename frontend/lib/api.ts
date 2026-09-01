@@ -32,9 +32,24 @@ export function apiUrl(path: string): string {
   return `${API_BASE_URL}${path}`;
 }
 
-export async function uploadVideo(file: File): Promise<AnalysisCreateResponse> {
+/** The slice of the upload to analyze, in seconds from the start of the video. */
+export interface AnalysisWindowRequest {
+  startSeconds?: number;
+  endSeconds?: number;
+}
+
+export async function uploadVideo(
+  file: File,
+  window: AnalysisWindowRequest = {}
+): Promise<AnalysisCreateResponse> {
   const formData = new FormData();
   formData.append("file", file);
+  if (window.startSeconds !== undefined) {
+    formData.append("start_seconds", String(window.startSeconds));
+  }
+  if (window.endSeconds !== undefined) {
+    formData.append("end_seconds", String(window.endSeconds));
+  }
 
   const response = await fetch(apiUrl("/api/v1/analyses"), {
     method: "POST",

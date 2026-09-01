@@ -129,12 +129,18 @@ export interface Insight {
   source: "ai_interpretation" | "rule_based_fallback";
 }
 
+export interface AnalysisWindow {
+  requested_start_seconds: number | null;
+  requested_end_seconds: number | null;
+}
+
 export interface AnalysisFullResponse {
   analysis_id: string;
   status: AnalysisStatus;
   stage: Stage;
   progress: number;
   original_filename: string;
+  analysis_window: AnalysisWindow | null;
   video_url: string;
   annotated_video_url: string | null;
   video_metadata: VideoMetadata | null;

@@ -1,7 +1,6 @@
 """Reusable video processing abstraction built on OpenCV (frame I/O)
-and ffmpeg (available on PATH, used implicitly by OpenCV's backend on
-most platforms; kept as an explicit dependency per the project spec even
-though this module doesn't shell out to it directly today).
+and ffmpeg (on PATH; used explicitly to transcode the annotated output
+into a codec browsers can actually decode).
 
 Frame sampling is configurable via PROCESSING_FPS so a 90-minute match
 doesn't require running YOLO on every single frame.
@@ -10,6 +9,8 @@ doesn't require running YOLO on every single frame.
 from __future__ import annotations
 
 import logging
+import shutil
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterator
@@ -80,20 +81,43 @@ class VideoProcessor:
         finally:
             cap.release()
 
-    def extract_frames(self) -> Iterator[SampledFrame]:
-        """Yield frames sampled at `processing_fps`, evenly spaced through
-        the source video regardless of its native frame rate."""
+    def extract_frames(
+        self,
+        start_seconds: float = 0.0,
+        end_seconds: float | None = None,
+    ) -> Iterator[SampledFrame]:
+        """Yield frames sampled at `processing_fps` between `start_seconds`
+        and `end_seconds`, regardless of the source's native frame rate.
+
+        Seeking matters for real uploads: a broadcast of a school match
+        opens with several minutes of intro package, so analysing from
+        frame 0 analyses titles and highlight clips rather than play.
+        Timestamps stay absolute (measured from the start of the video),
+        so they line up with the `<video>` element's own clock.
+        """
         metadata = self.get_metadata()
         step = max(1, round(metadata.fps / self.processing_fps)) if self.processing_fps > 0 else 1
+
+        start_seconds = max(0.0, start_seconds)
+        first_index = int(start_seconds * metadata.fps)
+        last_index = int(end_seconds * metadata.fps) if end_seconds is not None else None
 
         cap = cv2.VideoCapture(str(self.video_path))
         if not cap.isOpened():
             raise VideoReadError(f"Could not open video file: {self.video_path}")
 
         try:
+            if first_index > 0:
+                # Land on a sampling boundary so the emitted cadence is the
+                # same whether or not a start offset was given.
+                first_index -= first_index % step
+                cap.set(cv2.CAP_PROP_POS_FRAMES, first_index)
+
             sampled_index = 0
-            source_index = 0
+            source_index = first_index
             while True:
+                if last_index is not None and source_index > last_index:
+                    break
                 ok, frame = cap.read()
                 if not ok:
                     break
@@ -136,11 +160,68 @@ class VideoProcessor:
 
         height, width = frames[0].shape[:2]
         output_fps = fps or self.processing_fps or 5.0
+
+        # OpenCV can only reliably write MPEG-4 Part 2 ("mp4v"/FMP4) here.
+        # No browser decodes that, so the annotated video would load as a
+        # black frame with a spinner. Write it to a scratch file, then let
+        # ffmpeg transcode to H.264 — the codec browsers actually support.
+        scratch = output_path.with_name(f"{output_path.stem}__raw.mp4")
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        writer = cv2.VideoWriter(str(output_path), fourcc, output_fps, (width, height))
+        writer = cv2.VideoWriter(str(scratch), fourcc, output_fps, (width, height))
         try:
             for frame in frames:
                 writer.write(frame)
         finally:
             writer.release()
+
+        if not self._transcode_to_h264(scratch, output_path):
+            # Better a video only some players can open than none at all.
+            scratch.replace(output_path)
+        else:
+            scratch.unlink(missing_ok=True)
+
         return output_path
+
+    @staticmethod
+    def _transcode_to_h264(source: Path, destination: Path) -> bool:
+        """Re-encode `source` to browser-playable H.264 + faststart.
+
+        Returns False (and leaves `destination` alone) if ffmpeg is missing
+        or fails, so a transcode problem degrades the output rather than
+        failing the whole analysis.
+        """
+        ffmpeg = shutil.which("ffmpeg")
+        if ffmpeg is None:
+            logger.warning(
+                "ffmpeg not found on PATH; annotated video stays MPEG-4 Part 2 "
+                "and will not play in a browser"
+            )
+            return False
+
+        try:
+            result = subprocess.run(
+                [
+                    ffmpeg, "-y", "-loglevel", "error",
+                    "-i", str(source),
+                    "-c:v", "libx264",
+                    "-preset", "veryfast",
+                    "-pix_fmt", "yuv420p",   # required for broad browser support
+                    "-movflags", "+faststart",  # moov up front so playback can start early
+                    str(destination),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=600,
+            )
+        except (subprocess.SubprocessError, OSError) as exc:
+            logger.warning("ffmpeg transcode of %s failed: %s", source.name, exc)
+            return False
+
+        if result.returncode != 0:
+            logger.warning(
+                "ffmpeg transcode of %s exited %d: %s",
+                source.name, result.returncode, result.stderr.strip()[:400],
+            )
+            return False
+
+        return True
