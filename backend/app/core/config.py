@@ -42,7 +42,12 @@ class Settings(BaseSettings):
     # --- AI tactical analyst ---
     ai_api_key: str = ""
     ai_api_base_url: str = "https://api.anthropic.com"
-    model_name: str = "claude-sonnet-5"
+    model_name: str = "claude-opus-5"
+
+    # Identity-linked API keys must name the workspace the request acts in,
+    # or the Messages API rejects the call with a 400. Organization-scoped
+    # keys ignore this, so it stays optional.
+    ai_workspace_id: str = ""
 
     # --- CORS ---
     cors_origins: str = "http://localhost:3000"
