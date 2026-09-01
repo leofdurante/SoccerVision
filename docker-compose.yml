@@ -1,0 +1,36 @@
+# Optional containerized run. The recommended local dev path (faster
+# iteration, no image rebuilds for model downloads) is documented in the
+# README: `uvicorn` + `npm run dev` directly on the host. This compose
+# file exists so the project can also be brought up with one command
+# without any cloud dependency — everything here runs on localhost.
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=sqlite:////app/data/soccervision.db
+      - UPLOAD_DIR=/app/data/uploads
+      - OUTPUT_DIR=/app/data/processed
+    volumes:
+      - ./data:/app/data
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+    depends_on:
+      - backend
+
+# Postgres is intentionally not included here — the app runs on SQLite
+# by default (see .env.example). To use Postgres instead, add a `db`
+# service here and point DATABASE_URL at it; app/models/database.py
+# doesn't assume SQLite anywhere except the SQLite-specific connect_args.

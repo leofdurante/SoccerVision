@@ -1,0 +1,32 @@
+# --- Secrets ---
+.env
+*.env.local
+
+# --- Python / backend ---
+backend/.venv/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+backend/*.pt
+backend/yolov8n.pt
+
+# --- Node / frontend ---
+frontend/node_modules/
+frontend/.next/
+frontend/next-env.d.ts
+
+# --- Data (uploaded/processed video, local DB) ---
+data/uploads/*
+data/processed/*
+!data/uploads/.gitkeep
+!data/processed/.gitkeep
+data/*.db
+data/demo_assets/*.jpg
+data/demo_assets/*.mp4
+
+# --- Logs / local run artifacts ---
+*.log
+backend/uvicorn.pid
+
+# --- OS ---
+.DS_Store
