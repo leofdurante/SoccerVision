@@ -1,11 +1,12 @@
 """Camera-view → normalized pitch coordinate mapping via homography.
 
-MVP approach (per spec): manually configured field points. A real product
-would auto-detect pitch lines; here we assume a fixed camera position for
-a given video and let 4 image-space corner points be configured (default:
-the full source frame, i.e. the camera is assumed to already show the
-whole pitch, corner to corner — a common simplification for a single
-tactical/broadcast camera in a hackathon demo).
+MVP approach: map the *visible* slice of the pitch, not the whole field.
+
+A panning camera almost never shows corner-to-corner. The 4 image points
+are the visible turf quad; the 4 destination points are the matching
+sub-rectangle of the 0–100 pitch (centre circle / halfway line / box),
+estimated per frame in `pitch_view.py`. Full-frame = full-pitch remains
+the fallback when no landmarks are found.
 
 Normalized pitch coordinates follow the spec's convention:
   x: 0 (left goal line)   -> 100 (right goal line)
@@ -66,20 +67,30 @@ def estimate_pitch_image_corners(frame: np.ndarray) -> list[list[float]] | None:
 
 
 class FieldMapper:
-    def __init__(self):
+    def __init__(self, smooth: float = 0.7):
         self._h_image_to_field: np.ndarray | None = None
         self._h_field_to_image: np.ndarray | None = None
+        self._smooth = float(np.clip(smooth, 0.0, 0.95))
+        self._image_corners: np.ndarray | None = None
+        self._pitch_corners: np.ndarray | None = None
+        self.last_label: str = "full"
+        self._view_seeded = False
+
+    @property
+    def is_ready(self) -> bool:
+        return self._h_image_to_field is not None
 
     def calculate_homography(
         self,
         frame_width: int,
         frame_height: int,
         image_corners: list[list[float]] | None = None,
+        pitch_corners: list[list[float]] | None = None,
     ) -> None:
         """`image_corners` is the same 4-point order as `_PITCH_CORNERS`
         (top-left, top-right, bottom-right, bottom-left) in pixel space.
-        Defaults to the full frame if not provided — the MVP assumption
-        that the camera already frames the whole pitch."""
+        `pitch_corners` is that same order in 0–100 pitch space; omitted
+        it means the whole pitch, which is the old full-frame assumption."""
         import cv2
 
         if image_corners is None:
@@ -94,8 +105,41 @@ class FieldMapper:
         if src.shape != (4, 2):
             raise FieldMappingError("image_corners must contain exactly 4 [x, y] points")
 
-        self._h_image_to_field = cv2.getPerspectiveTransform(src, _PITCH_CORNERS)
-        self._h_field_to_image = cv2.getPerspectiveTransform(_PITCH_CORNERS, src)
+        dst = np.array(pitch_corners, dtype=np.float32) if pitch_corners is not None else _PITCH_CORNERS
+        if dst.shape != (4, 2):
+            raise FieldMappingError("pitch_corners must contain exactly 4 [x, y] points")
+
+        self._image_corners = src
+        self._pitch_corners = dst
+        self._h_image_to_field = cv2.getPerspectiveTransform(src, dst)
+        self._h_field_to_image = cv2.getPerspectiveTransform(dst, src)
+
+    def update_visible_view(
+        self,
+        frame_width: int,
+        frame_height: int,
+        image_corners: list[list[float]],
+        pitch_corners: list[list[float]],
+        label: str = "full",
+    ) -> None:
+        """Recompute homography for this frame, easing toward the new view.
+
+        A pan would otherwise slam players from midfield to a goal in one
+        sample whenever the landmark detector flips labels.
+        """
+        src = np.array(image_corners, dtype=np.float32)
+        dst = np.array(pitch_corners, dtype=np.float32)
+        if self._view_seeded and self._image_corners is not None and self._pitch_corners is not None:
+            src = self._smooth * self._image_corners + (1.0 - self._smooth) * src
+            dst = self._smooth * self._pitch_corners + (1.0 - self._smooth) * dst
+        self._view_seeded = True
+        self.last_label = label
+        self.calculate_homography(
+            frame_width,
+            frame_height,
+            image_corners=src.tolist(),
+            pitch_corners=dst.tolist(),
+        )
 
     def image_to_field(self, point: tuple[float, float]) -> tuple[float, float]:
         if self._h_image_to_field is None:

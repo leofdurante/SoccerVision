@@ -48,6 +48,28 @@ def test_custom_image_corners():
     assert top_left_field == pytest.approx((0, 0), abs=0.5)
 
 
+def test_partial_pitch_destination_does_not_stretch_to_full_field():
+    mapper = FieldMapper(smooth=0)
+    mapper.calculate_homography(
+        frame_width=100,
+        frame_height=100,
+        image_corners=[[0, 0], [100, 0], [100, 100], [0, 100]],
+        pitch_corners=[[30, 0], [70, 0], [70, 100], [30, 100]],
+    )
+    assert mapper.image_to_field((0, 50))[0] == pytest.approx(30, abs=1)
+    assert mapper.image_to_field((100, 50))[0] == pytest.approx(70, abs=1)
+    assert mapper.image_to_field((50, 50))[0] == pytest.approx(50, abs=1)
+
+
+def test_view_smoothing_eases_between_slices():
+    mapper = FieldMapper(smooth=0.5)
+    full = [[0, 0], [100, 0], [100, 100], [0, 100]]
+    mapper.update_visible_view(100, 100, full, [[0, 0], [40, 0], [40, 100], [0, 100]], "left_third")
+    mapper.update_visible_view(100, 100, full, [[60, 0], [100, 0], [100, 100], [60, 100]], "right_third")
+    # One 50/50 blend: left edge sits around x=30, not a jump to 60.
+    assert mapper.image_to_field((0, 50))[0] == pytest.approx(30, abs=4)
+
+
 def test_pitch_corners_follow_the_turf_not_the_stands():
     from app.cv.field_mapper import estimate_pitch_image_corners
 

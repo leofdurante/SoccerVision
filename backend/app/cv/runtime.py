@@ -23,23 +23,22 @@ def reset_yolo_runtime_cache() -> None:
 def yolo_runtime_kwargs() -> dict:
     """Arguments to forward to Ultralytics `predict` / `track`.
 
-    `half` is only set on CUDA — it errors or silently degrades on CPU.
+    On CUDA we request FP16 via `quantize=16` (the replacement for the
+    deprecated `half=True` flag). CPU stays on default FP32.
     """
     global _kwargs
     if _kwargs is not None:
         return _kwargs
 
-    device: str | int = "cpu"
-    half = False
+    kwargs: dict = {"device": "cpu"}
     try:
         import torch
 
         if torch.cuda.is_available():
-            device = 0
-            half = True
+            kwargs = {"device": 0, "quantize": 16}
     except Exception:
         logger.debug("torch unavailable; YOLO stays on CPU", exc_info=True)
 
-    _kwargs = {"device": device, "half": half}
-    logger.info("YOLO inference device=%s half=%s", device, half)
+    _kwargs = kwargs
+    logger.info("YOLO inference %s", kwargs)
     return _kwargs

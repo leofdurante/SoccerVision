@@ -25,7 +25,26 @@ def test_yolo_runtime_uses_cpu_when_cuda_is_missing(monkeypatch):
     runtime.reset_yolo_runtime_cache()
     kwargs = runtime.yolo_runtime_kwargs()
     assert kwargs["device"] == "cpu"
-    assert kwargs["half"] is False
+    assert "quantize" not in kwargs
+    assert "half" not in kwargs
+    runtime.reset_yolo_runtime_cache()
+
+
+def test_yolo_runtime_uses_quantize_not_half_on_cuda(monkeypatch):
+    import sys
+
+    import app.cv.runtime as runtime
+
+    class _Torch:
+        class cuda:
+            @staticmethod
+            def is_available():
+                return True
+
+    monkeypatch.setitem(sys.modules, "torch", _Torch)
+    runtime.reset_yolo_runtime_cache()
+    kwargs = runtime.yolo_runtime_kwargs()
+    assert kwargs == {"device": 0, "quantize": 16}
     runtime.reset_yolo_runtime_cache()
 
 

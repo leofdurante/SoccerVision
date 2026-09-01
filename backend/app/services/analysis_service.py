@@ -27,7 +27,8 @@ from sqlalchemy.orm import Session
 from app.analytics import advantages, events as events_engine, formations, possession, spacing
 from app.analytics.zones import x_third
 from app.core.config import Settings
-from app.cv.field_mapper import FieldMapper, estimate_pitch_image_corners
+from app.cv.field_mapper import FieldMapper
+from app.cv.pitch_view import estimate_visible_pitch
 from app.cv.team_classifier import TeamClassifier
 from app.cv.tracker import Tracker, build_tracker
 from app.models.analysis import Analysis
@@ -198,8 +199,7 @@ def run_analysis(analysis_id: str, db: Session, settings: Settings) -> None:
         tracker.reset()
 
         field_mapper = FieldMapper()
-        field_mapper.calculate_homography(metadata.width, metadata.height)
-        pitch_fitted = False
+        last_view_log = ""
 
         player_trajectory: dict[int, list[dict]] = defaultdict(list)
         ball_trajectory: list[dict] = []
@@ -227,18 +227,27 @@ def run_analysis(analysis_id: str, db: Session, settings: Settings) -> None:
                 )
                 break
 
-            if not pitch_fitted:
-                corners = estimate_pitch_image_corners(sampled.image)
-                if corners is not None:
-                    field_mapper.calculate_homography(
-                        metadata.width, metadata.height, corners
-                    )
+            view = estimate_visible_pitch(sampled.image)
+            if view is not None:
+                field_mapper.update_visible_view(
+                    metadata.width,
+                    metadata.height,
+                    view.image_corners,
+                    view.pitch_corners,
+                    label=view.label,
+                )
+                if view.label != last_view_log:
                     logger.info(
-                        "Analysis %s: pitch corners from playing surface %s",
+                        "Analysis %s: visible pitch is %s (x=%.0f–%.0f, conf=%.2f)",
                         analysis_id,
-                        [[round(c, 1) for c in corner] for corner in corners],
+                        view.label,
+                        view.pitch_corners[0][0],
+                        view.pitch_corners[1][0],
+                        view.confidence,
                     )
-                pitch_fitted = True
+                    last_view_log = view.label
+            elif not field_mapper.is_ready:
+                field_mapper.calculate_homography(metadata.width, metadata.height)
 
             tracked_objects = tracker.update(sampled.image)
             kept_objects = []
